@@ -702,6 +702,10 @@ tr.is-dragging td,
   background: #edf6f3;
 }
 
+tr.is-dragging {
+  opacity: 0.28;
+}
+
 tr.is-dragging td {
   border-top: 1px solid #b8d9d0;
   border-bottom: 1px solid #b8d9d0;
@@ -709,8 +713,43 @@ tr.is-dragging td {
 
 .bucket-card.is-dragging {
   border-color: #83bfb3;
-  box-shadow: 0 16px 34px rgba(30, 70, 61, 0.12);
-  opacity: 0.78;
+  box-shadow: none;
+  opacity: 0.28;
+}
+
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.96;
+  filter: drop-shadow(0 18px 30px rgba(30, 70, 61, 0.22));
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.drag-ghost table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid #b8d9d0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.drag-ghost tr,
+.drag-ghost td {
+  background: #ffffff;
+}
+
+.drag-ghost .bucket-card {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  border-color: #83bfb3;
+  box-shadow: none;
 }
 
 .amount-stack {
@@ -2765,6 +2804,9 @@ function handleReorderPointerDown(event) {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
+    offsetX: 0,
+    offsetY: 0,
+    ghostElement: null,
     started: false,
     moved: false,
     initialOrder: getDomOrder(container, kind),
@@ -2785,11 +2827,12 @@ function handleReorderPointerMove(event) {
   }
 
   if (!reorderDrag.started) {
-    startReorderDrag();
+    startReorderDrag(event);
   }
 
   reorderDrag.moved = true;
   event.preventDefault();
+  updateDragGhost(event);
 
   const target = findReorderTarget(event.clientX, event.clientY);
   if (!target || target === reorderDrag.itemElement) return;
@@ -2816,6 +2859,7 @@ function finishReorder(commit) {
   drag.container.classList.remove("is-reordering-list");
   document.body.classList.remove("is-reordering");
   drag.controlElement.releasePointerCapture?.(drag.pointerId);
+  drag.ghostElement?.remove();
   document.removeEventListener("pointermove", handleReorderPointerMove);
   document.removeEventListener("pointerup", handleReorderPointerUp);
   document.removeEventListener("pointercancel", handleReorderPointerCancel);
@@ -2837,12 +2881,54 @@ function finishReorder(commit) {
   render();
 }
 
-function startReorderDrag() {
+function startReorderDrag(event) {
   if (!reorderDrag) return;
+  const rect = reorderDrag.itemElement.getBoundingClientRect();
+  const ghost = createDragGhost(reorderDrag.itemElement, reorderDrag.kind, rect);
+
   reorderDrag.started = true;
+  reorderDrag.offsetX = reorderDrag.startX - rect.left;
+  reorderDrag.offsetY = reorderDrag.startY - rect.top;
+  reorderDrag.ghostElement = ghost;
   reorderDrag.itemElement.classList.add("is-dragging");
   reorderDrag.container.classList.add("is-reordering-list");
   document.body.classList.add("is-reordering");
+  document.body.appendChild(ghost);
+  updateDragGhost(event);
+}
+
+function createDragGhost(sourceElement, kind, rect) {
+  const ghost = document.createElement("div");
+  ghost.className = `drag-ghost drag-ghost-${kind}`;
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.minHeight = `${rect.height}px`;
+
+  const clone = sourceElement.cloneNode(true);
+  clone.classList.remove("is-dragging");
+  clone.querySelectorAll("[id]").forEach((element) => element.removeAttribute("id"));
+  clone.querySelectorAll("button, input, select, textarea").forEach((element) => {
+    element.tabIndex = -1;
+    element.setAttribute("aria-hidden", "true");
+  });
+
+  if (sourceElement.tagName === "TR") {
+    const table = document.createElement("table");
+    const body = document.createElement("tbody");
+    table.appendChild(body);
+    body.appendChild(clone);
+    ghost.appendChild(table);
+  } else {
+    ghost.appendChild(clone);
+  }
+
+  return ghost;
+}
+
+function updateDragGhost(event) {
+  if (!reorderDrag?.ghostElement) return;
+  const x = event.clientX - reorderDrag.offsetX;
+  const y = event.clientY - reorderDrag.offsetY;
+  reorderDrag.ghostElement.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 }
 
 function isInteractiveReorderTarget(target) {
