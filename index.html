@@ -636,6 +636,61 @@ td {
   text-align: right;
 }
 
+.reorder-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 76px;
+}
+
+.drag-handle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  cursor: grab;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  border-color: #bdd4cf;
+  background: #edf6f3;
+  color: var(--teal-dark);
+}
+
+body.is-reordering {
+  user-select: none;
+}
+
+body.is-reordering .drag-handle {
+  cursor: grabbing;
+}
+
+tr.is-dragging td,
+.bucket-card.is-dragging {
+  background: #edf6f3;
+}
+
+tr.is-dragging td {
+  border-top: 1px solid #b8d9d0;
+  border-bottom: 1px solid #b8d9d0;
+}
+
+.bucket-card.is-dragging {
+  border-color: #83bfb3;
+  box-shadow: 0 16px 34px rgba(30, 70, 61, 0.12);
+  opacity: 0.78;
+}
+
 .amount-stack {
   display: grid;
   justify-items: end;
@@ -698,7 +753,15 @@ td {
   padding: 16px;
 }
 
+.bucket-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
 .bucket-top strong {
+  min-width: 0;
   overflow-wrap: anywhere;
   font-size: 17px;
 }
@@ -1463,6 +1526,7 @@ let applyingRemoteState = false;
 let pendingResolver = null;
 let pendingTotpHint = null;
 let pendingEnrollmentSecret = null;
+let reorderDrag = null;
 
 const configReady = hasFirebaseConfig(firebaseConfig);
 
@@ -1990,9 +2054,7 @@ function renderAnnualGoals() {
 }
 
 function renderUpcomingPayments(payments, status) {
-  const upcoming = payments
-    .filter((payment) => !status.payments[payment.id])
-    .sort((a, b) => Number(a.dueDay) - Number(b.dueDay));
+  const upcoming = payments.filter((payment) => !status.payments[payment.id]);
 
   if (!upcoming.length) {
     elements.upcomingPayments.innerHTML = `<div class="empty-state">今月の支払いはすべて完了しています。</div>`;
@@ -2050,7 +2112,7 @@ function renderAllocation(paymentTotal, savingTotal, nisaTotal) {
 
 function renderPayments() {
   const status = selectedMonthStatus();
-  const payments = activePayments().sort((a, b) => Number(a.dueDay) - Number(b.dueDay));
+  const payments = activePayments();
   elements.paymentsCount.textContent = `${payments.length}件`;
 
   if (!payments.length) {
@@ -2061,11 +2123,16 @@ function renderPayments() {
   elements.paymentsTable.innerHTML = payments
     .map(
       (payment) => `
-        <tr>
+        <tr data-reorder-item="payment" data-id="${payment.id}">
           <td>
-            <label class="check-wrap" aria-label="${escapeHtml(payment.name)}を完了">
-              <input type="checkbox" data-status="payment" data-id="${payment.id}" ${status.payments[payment.id] ? "checked" : ""} />
-            </label>
+            <div class="reorder-cell">
+              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="payment" aria-label="${escapeAttribute(payment.name)}を並び替え">
+                <span aria-hidden="true">↕</span>
+              </button>
+              <label class="check-wrap" aria-label="${escapeHtml(payment.name)}を完了">
+                <input type="checkbox" data-status="payment" data-id="${payment.id}" ${status.payments[payment.id] ? "checked" : ""} />
+              </label>
+            </div>
           </td>
           <td><strong>${escapeHtml(payment.name)}</strong></td>
           <td>${categoryLabels[payment.category] || "その他"}</td>
@@ -2106,9 +2173,14 @@ function renderSavings() {
       const bonusText = bonusPlanText(saving);
       const percent = saving.annualGoal > 0 ? Math.min(100, Math.round((yearly / saving.annualGoal) * 100)) : 0;
       return `
-        <article class="bucket-card">
+        <article class="bucket-card" data-reorder-item="saving" data-id="${saving.id}">
           <div class="bucket-top">
-            <strong>${escapeHtml(saving.name)}</strong>
+            <div class="bucket-title-row">
+              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="saving" aria-label="${escapeAttribute(saving.name)}を並び替え">
+                <span aria-hidden="true">↕</span>
+              </button>
+              <strong>${escapeHtml(saving.name)}</strong>
+            </div>
             <span class="tag ${saving.type}">${typeLabels[saving.type]}</span>
           </div>
           <div class="bucket-amount">
@@ -2161,9 +2233,14 @@ function renderNisa() {
       const bonusText = bonusPlanText(item);
       const percent = item.annualGoal > 0 ? Math.min(100, Math.round((yearly / item.annualGoal) * 100)) : 0;
       return `
-        <article class="bucket-card">
+        <article class="bucket-card" data-reorder-item="nisa" data-id="${item.id}">
           <div class="bucket-top">
-            <strong>${escapeHtml(item.name)}</strong>
+            <div class="bucket-title-row">
+              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="nisa" aria-label="${escapeAttribute(item.name)}を並び替え">
+                <span aria-hidden="true">↕</span>
+              </button>
+              <strong>${escapeHtml(item.name)}</strong>
+            </div>
             <span class="tag nisa">NISA</span>
           </div>
           <div class="bucket-amount">
@@ -2451,6 +2528,122 @@ function deleteItem(kind, id) {
   });
   showToast("削除しました。");
   render();
+}
+
+function handleReorderPointerDown(event) {
+  const handle = event.target.closest("[data-reorder-handle]");
+  if (!handle || event.button > 0) return;
+
+  const kind = handle.dataset.reorderKind;
+  const itemElement = handle.closest(`[data-reorder-item="${kind}"]`);
+  const container = itemElement?.parentElement;
+  if (!kind || !itemElement || !container) return;
+
+  reorderDrag = {
+    kind,
+    id: itemElement.dataset.id,
+    container,
+    itemElement,
+    handle,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    moved: false,
+    initialOrder: getDomOrder(container, kind),
+  };
+
+  itemElement.classList.add("is-dragging");
+  container.classList.add("is-reordering-list");
+  document.body.classList.add("is-reordering");
+  handle.setPointerCapture?.(event.pointerId);
+  document.addEventListener("pointermove", handleReorderPointerMove, { passive: false });
+  document.addEventListener("pointerup", handleReorderPointerUp);
+  document.addEventListener("pointercancel", handleReorderPointerCancel);
+  event.preventDefault();
+}
+
+function handleReorderPointerMove(event) {
+  if (!reorderDrag || event.pointerId !== reorderDrag.pointerId) return;
+  event.preventDefault();
+
+  const movedDistance = Math.abs(event.clientX - reorderDrag.startX) + Math.abs(event.clientY - reorderDrag.startY);
+  if (movedDistance > 6) {
+    reorderDrag.moved = true;
+  }
+
+  const target = findReorderTarget(event.clientX, event.clientY);
+  if (!target || target === reorderDrag.itemElement) return;
+
+  const beforeTarget = shouldInsertBeforeTarget(event, target);
+  reorderDrag.container.insertBefore(reorderDrag.itemElement, beforeTarget ? target : target.nextSibling);
+}
+
+function handleReorderPointerUp(event) {
+  if (!reorderDrag || event.pointerId !== reorderDrag.pointerId) return;
+  finishReorder(true);
+}
+
+function handleReorderPointerCancel(event) {
+  if (!reorderDrag || event.pointerId !== reorderDrag.pointerId) return;
+  finishReorder(false);
+}
+
+function finishReorder(commit) {
+  const drag = reorderDrag;
+  if (!drag) return;
+
+  drag.itemElement.classList.remove("is-dragging");
+  drag.container.classList.remove("is-reordering-list");
+  document.body.classList.remove("is-reordering");
+  drag.handle.releasePointerCapture?.(drag.pointerId);
+  document.removeEventListener("pointermove", handleReorderPointerMove);
+  document.removeEventListener("pointerup", handleReorderPointerUp);
+  document.removeEventListener("pointercancel", handleReorderPointerCancel);
+  reorderDrag = null;
+
+  if (!commit) {
+    render();
+    return;
+  }
+
+  const nextOrder = getDomOrder(drag.container, drag.kind);
+  if (!drag.moved || nextOrder.join("|") === drag.initialOrder.join("|")) return;
+
+  applyManualOrder(drag.kind, nextOrder);
+  showToast("並び順を保存しました。");
+  render();
+}
+
+function findReorderTarget(x, y) {
+  if (!reorderDrag) return null;
+  return document
+    .elementsFromPoint(x, y)
+    .map((element) => element.closest?.(`[data-reorder-item="${reorderDrag.kind}"]`))
+    .find((element) => element && element.parentElement === reorderDrag.container);
+}
+
+function shouldInsertBeforeTarget(event, target) {
+  const rect = target.getBoundingClientRect();
+  if (reorderDrag?.kind === "payment") {
+    return event.clientY < rect.top + rect.height / 2;
+  }
+
+  const aboveCenter = event.clientY < rect.top + rect.height / 2;
+  const leftOfCenter = event.clientX < rect.left + rect.width / 2;
+  return aboveCenter || leftOfCenter;
+}
+
+function getDomOrder(container, kind) {
+  return Array.from(container.querySelectorAll(`[data-reorder-item="${kind}"]`)).map((element) => element.dataset.id);
+}
+
+function applyManualOrder(kind, orderedIds) {
+  const collection = getCollection(kind);
+  const byId = new Map(collection.map((item) => [item.id, item]));
+  const orderedSet = new Set(orderedIds);
+  const orderedItems = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+  const remainingItems = collection.filter((item) => !orderedSet.has(item.id));
+  collection.splice(0, collection.length, ...orderedItems, ...remainingItems);
 }
 
 function toggleStatus(kind, id, checked = null) {
@@ -2786,6 +2979,8 @@ elements.monthlyIncome.addEventListener("change", (event) => {
   state.profile.monthlyIncome = parseAmount(event.target.value);
   render();
 });
+
+document.addEventListener("pointerdown", handleReorderPointerDown);
 
 document.addEventListener("click", (event) => {
   const editButton = event.target.closest("[data-edit]");
