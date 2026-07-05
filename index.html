@@ -717,6 +717,29 @@ tr.is-dragging td {
   opacity: 0.28;
 }
 
+.drop-placeholder td,
+.drop-placeholder {
+  border: 2px dashed #83bfb3;
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(15, 118, 110, 0.08),
+      rgba(15, 118, 110, 0.08) 10px,
+      rgba(15, 118, 110, 0.14) 10px,
+      rgba(15, 118, 110, 0.14) 20px
+    );
+}
+
+.drop-placeholder-payment td {
+  padding: 0;
+}
+
+.drop-placeholder-saving,
+.drop-placeholder-nisa {
+  min-width: 0;
+}
+
 .drag-ghost {
   position: fixed;
   left: 0;
@@ -2807,6 +2830,8 @@ function handleReorderPointerDown(event) {
     offsetX: 0,
     offsetY: 0,
     ghostElement: null,
+    placeholderElement: null,
+    previousDisplay: itemElement.style.display || "",
     started: false,
     moved: false,
     initialOrder: getDomOrder(container, kind),
@@ -2835,10 +2860,7 @@ function handleReorderPointerMove(event) {
   updateDragGhost(event);
 
   const target = findReorderTarget(event.clientX, event.clientY);
-  if (!target || target === reorderDrag.itemElement) return;
-
-  const beforeTarget = shouldInsertBeforeTarget(event, target);
-  reorderDrag.container.insertBefore(reorderDrag.itemElement, beforeTarget ? target : target.nextSibling);
+  moveDropPlaceholder(event, target);
 }
 
 function handleReorderPointerUp(event) {
@@ -2858,7 +2880,11 @@ function finishReorder(commit) {
   drag.itemElement.classList.remove("is-dragging");
   drag.container.classList.remove("is-reordering-list");
   document.body.classList.remove("is-reordering");
-  drag.controlElement.releasePointerCapture?.(drag.pointerId);
+  try {
+    drag.controlElement.releasePointerCapture?.(drag.pointerId);
+  } catch {
+    // Pointer capture can already be gone after the source item is hidden during drag.
+  }
   drag.ghostElement?.remove();
   document.removeEventListener("pointermove", handleReorderPointerMove);
   document.removeEventListener("pointerup", handleReorderPointerUp);
@@ -2866,11 +2892,22 @@ function finishReorder(commit) {
   reorderDrag = null;
 
   if (!commit) {
+    drag.itemElement.style.display = drag.previousDisplay;
+    drag.placeholderElement?.remove();
     render();
     return;
   }
 
-  if (!drag.started) return;
+  if (!drag.started) {
+    drag.itemElement.style.display = drag.previousDisplay;
+    return;
+  }
+
+  if (drag.placeholderElement?.parentElement) {
+    drag.container.insertBefore(drag.itemElement, drag.placeholderElement);
+    drag.placeholderElement.remove();
+  }
+  drag.itemElement.style.display = drag.previousDisplay;
 
   const nextOrder = getDomOrder(drag.container, drag.kind);
   if (!drag.moved || nextOrder.join("|") === drag.initialOrder.join("|")) return;
@@ -2885,11 +2922,15 @@ function startReorderDrag(event) {
   if (!reorderDrag) return;
   const rect = reorderDrag.itemElement.getBoundingClientRect();
   const ghost = createDragGhost(reorderDrag.itemElement, reorderDrag.kind, rect);
+  const placeholder = createDropPlaceholder(reorderDrag.itemElement, reorderDrag.kind, rect);
 
   reorderDrag.started = true;
   reorderDrag.offsetX = reorderDrag.startX - rect.left;
   reorderDrag.offsetY = reorderDrag.startY - rect.top;
   reorderDrag.ghostElement = ghost;
+  reorderDrag.placeholderElement = placeholder;
+  reorderDrag.container.insertBefore(placeholder, reorderDrag.itemElement);
+  reorderDrag.itemElement.style.display = "none";
   reorderDrag.itemElement.classList.add("is-dragging");
   reorderDrag.container.classList.add("is-reordering-list");
   document.body.classList.add("is-reordering");
@@ -2924,6 +2965,23 @@ function createDragGhost(sourceElement, kind, rect) {
   return ghost;
 }
 
+function createDropPlaceholder(sourceElement, kind, rect) {
+  if (kind === "payment") {
+    const row = document.createElement("tr");
+    row.className = "drop-placeholder drop-placeholder-payment";
+    const cell = document.createElement("td");
+    cell.colSpan = sourceElement.children.length || 7;
+    cell.style.height = `${Math.max(48, rect.height)}px`;
+    row.appendChild(cell);
+    return row;
+  }
+
+  const placeholder = document.createElement("article");
+  placeholder.className = `drop-placeholder drop-placeholder-${kind}`;
+  placeholder.style.minHeight = `${Math.max(120, rect.height)}px`;
+  return placeholder;
+}
+
 function updateDragGhost(event) {
   if (!reorderDrag?.ghostElement) return;
   const x = event.clientX - reorderDrag.offsetX;
@@ -2956,6 +3014,21 @@ function findReorderTarget(x, y) {
     },
     { item: null, distance: Number.POSITIVE_INFINITY },
   ).item;
+}
+
+function moveDropPlaceholder(event, target) {
+  if (!reorderDrag?.placeholderElement) return;
+
+  if (!target) {
+    reorderDrag.container.appendChild(reorderDrag.placeholderElement);
+    return;
+  }
+
+  const beforeTarget = shouldInsertBeforeTarget(event, target);
+  reorderDrag.container.insertBefore(
+    reorderDrag.placeholderElement,
+    beforeTarget ? target : target.nextSibling,
+  );
 }
 
 function shouldInsertBeforeTarget(event, target) {
