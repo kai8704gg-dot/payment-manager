@@ -1,0 +1,2638 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>支払いと貯金ノート</title>
+    <style>
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --surface-muted: #eef3ee;
+  --ink: #17211c;
+  --muted: #66736c;
+  --line: #dce4de;
+  --teal: #0f766e;
+  --teal-dark: #0a5b56;
+  --blue: #3454d1;
+  --rose: #b83259;
+  --amber: #b66d12;
+  --green: #2f7d4e;
+  --shadow: 0 16px 36px rgba(23, 33, 28, 0.08);
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    "Yu Gothic UI", "Hiragino Kaku Gothic ProN", Meiryo, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.hidden {
+  display: none !important;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(246, 247, 244, 0.94), rgba(246, 247, 244, 1)),
+    #f6f7f4;
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 24px;
+}
+
+.auth-card + .auth-card {
+  margin-top: 14px;
+}
+
+.auth-card h1 {
+  margin: 0 0 16px;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.auth-card p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-help,
+.auth-message {
+  width: min(520px, 100%);
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.auth-message.error {
+  color: var(--rose);
+}
+
+.mfa-secret-box {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.mfa-secret-box p {
+  margin: 0;
+}
+
+code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  background: #edf3ef;
+  color: var(--teal-dark);
+  padding: 3px 5px;
+  font-family: Consolas, "Roboto Mono", monospace;
+  font-size: 12px;
+}
+
+.uri-details {
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.uri-details textarea {
+  margin-top: 10px;
+  min-height: 92px;
+  font-size: 12px;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  border-right: 1px solid var(--line);
+  background: #fbfcfa;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #bfd8d4;
+  border-radius: 8px;
+  background: #e8f4f1;
+  color: var(--teal-dark);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.brand h1,
+.topbar h2,
+.panel h3,
+.modal h3 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.brand h1 {
+  font-size: 19px;
+  line-height: 1.35;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.nav-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font-weight: 700;
+}
+
+.nav-tab span:first-child {
+  width: 20px;
+  color: var(--teal);
+  text-align: center;
+}
+
+.nav-tab:hover,
+.nav-tab.active {
+  border-color: #cfe1dc;
+  background: #eef7f4;
+  color: var(--ink);
+}
+
+.settings-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.account-panel {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
+.account-panel > strong {
+  overflow-wrap: anywhere;
+}
+
+.account-panel > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.account-meta {
+  display: grid;
+  gap: 5px;
+}
+
+.account-meta span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.field-group {
+  display: grid;
+  gap: 7px;
+}
+
+.field-group label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 11px;
+  outline: none;
+}
+
+textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.sidebar-actions,
+.topbar-actions,
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sidebar-actions {
+  margin-top: auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 9px 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.button.primary {
+  background: var(--teal);
+  color: #ffffff;
+}
+
+.button.primary:hover {
+  background: var(--teal-dark);
+}
+
+.button.secondary {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.button.secondary:hover,
+.button.subtle:hover {
+  border-color: #bdd4cf;
+  background: #edf6f3;
+}
+
+.button.subtle {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.file-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.main-content {
+  min-width: 0;
+  padding: 28px;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.topbar h2 {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: grid;
+  gap: 18px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card,
+.panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.metric-card {
+  min-height: 136px;
+  padding: 18px;
+}
+
+.metric-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.metric-card strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1;
+}
+
+.metric-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.balance-card {
+  background: #102923;
+  color: #ffffff;
+}
+
+.balance-card p,
+.balance-card span {
+  color: #cfe1dc;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.panel-heading,
+.modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.panel h3,
+.modal h3 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.goal-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.goal-row {
+  display: grid;
+  gap: 9px;
+}
+
+.goal-row-header,
+.list-item,
+.bucket-top,
+.bucket-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-row-header {
+  font-weight: 800;
+}
+
+.goal-row-header span:last-child {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.progress-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eeeb;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--teal);
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 18px;
+}
+
+.compact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.list-item {
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfcfa;
+}
+
+.list-main {
+  min-width: 0;
+}
+
+.list-main strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.list-main span,
+.bucket-meta,
+.bucket-note,
+.empty-state {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.allocation-chart {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e9eeeb;
+}
+
+.allocation-segment {
+  min-width: 2px;
+  height: 100%;
+}
+
+.legend {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.legend-label {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+td {
+  font-size: 14px;
+}
+
+.amount-cell,
+.action-cell {
+  text-align: right;
+}
+
+.check-wrap {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+
+.check-wrap input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--teal);
+}
+
+.bucket-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.bucket-card {
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  min-height: 236px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 16px;
+}
+
+.bucket-top strong {
+  overflow-wrap: anywhere;
+  font-size: 17px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tag.personal {
+  background: #e7f1ff;
+  color: var(--blue);
+}
+
+.tag.shared {
+  background: #e8f5ef;
+  color: var(--green);
+}
+
+.tag.reserve {
+  background: #fff0d9;
+  color: var(--amber);
+}
+
+.tag.nisa {
+  background: #fde8ef;
+  color: var(--rose);
+}
+
+.bucket-amount {
+  display: grid;
+  gap: 4px;
+}
+
+.bucket-amount span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bucket-amount strong {
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.bucket-note {
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.small-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.small-button {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.small-button:hover,
+.icon-button:hover {
+  border-color: #bdd4cf;
+  background: #edf6f3;
+}
+
+.small-button.danger {
+  color: var(--rose);
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+}
+
+.modal {
+  width: min(720px, calc(100vw - 28px));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 28px 70px rgba(23, 33, 28, 0.22);
+}
+
+.modal::backdrop {
+  background: rgba(18, 29, 24, 0.42);
+}
+
+.item-form {
+  padding: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-grid .span-2 {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  max-width: min(420px, calc(100vw - 36px));
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid #b9d6cf;
+  border-radius: 8px;
+  background: #eff8f5;
+  color: var(--teal-dark);
+  padding: 12px 14px;
+  font-weight: 800;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.empty-state {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfa;
+  text-align: center;
+}
+
+@media (max-width: 1120px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bucket-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    gap: 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .nav-tab {
+    justify-content: center;
+    min-height: 54px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .nav-tab span:last-child {
+    display: none;
+  }
+
+  .settings-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .main-content {
+    padding: 22px;
+  }
+
+  .topbar,
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    display: grid;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar,
+  .main-content {
+    padding: 16px;
+  }
+
+  .brand h1 {
+    font-size: 17px;
+  }
+
+  .settings-panel,
+  .summary-grid,
+  .bucket-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar h2 {
+    font-size: 24px;
+  }
+
+  .topbar-actions,
+  .sidebar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .topbar-actions .button,
+  .sidebar-actions .button {
+    width: 100%;
+  }
+
+  .metric-card {
+    min-height: 118px;
+  }
+
+  .panel-heading,
+  .modal-heading,
+  .goal-row-header,
+  .bucket-top,
+  .bucket-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pill {
+    white-space: normal;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <div class="auth-shell" id="authShell">
+      <section class="auth-card" id="firebaseSetupNotice">
+        <p class="eyebrow">Firebase Setup</p>
+        <h1>Firebase設定を入れてください</h1>
+        <p>
+          `index.html` 内のFirebase設定値を使って、ログイン、MFA、Firestore同期が使えるようになります。
+        </p>
+      </section>
+
+      <section class="auth-card" id="signInPanel">
+        <p class="eyebrow">Secure Sign In</p>
+        <h1>支払いと貯金ノート</h1>
+        <form class="auth-form" id="signInForm">
+          <div class="field-group">
+            <label for="authEmail">メールアドレス</label>
+            <input id="authEmail" type="email" autocomplete="email" required />
+          </div>
+          <div class="field-group">
+            <label for="authPassword">パスワード</label>
+            <input id="authPassword" type="password" autocomplete="current-password" minlength="6" required />
+          </div>
+          <div class="auth-actions">
+            <button class="button primary" type="submit">ログイン</button>
+            <button class="button secondary" id="createAccountButton" type="button">新規作成</button>
+          </div>
+        </form>
+        <p class="auth-help">初回ログイン後、認証アプリの6桁コードを登録するまで家計データは表示されません。</p>
+      </section>
+
+      <section class="auth-card hidden" id="mfaChallengePanel">
+        <p class="eyebrow">Two-Step Verification</p>
+        <h1>2段階認証</h1>
+        <form class="auth-form" id="mfaChallengeForm">
+          <div class="field-group">
+            <label for="mfaChallengeCode">認証アプリの6桁コード</label>
+            <input id="mfaChallengeCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required />
+          </div>
+          <div class="auth-actions">
+            <button class="button primary" type="submit">確認</button>
+            <button class="button subtle" id="backToSignInButton" type="button">戻る</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="auth-card hidden" id="mfaSetupPanel">
+        <p class="eyebrow">MFA Enrollment</p>
+        <h1>認証アプリを登録</h1>
+        <div class="mfa-secret-box">
+          <p>Google Authenticator、Microsoft Authenticator、1Passwordなどに下の秘密鍵を登録してください。</p>
+          <code id="mfaSecretKey">-</code>
+        </div>
+        <details class="uri-details">
+          <summary>手動登録用URI</summary>
+          <textarea id="mfaTotpUri" readonly></textarea>
+        </details>
+        <form class="auth-form" id="mfaEnrollForm">
+          <div class="field-group">
+            <label for="mfaDisplayName">端末名</label>
+            <input id="mfaDisplayName" type="text" value="認証アプリ" />
+          </div>
+          <div class="field-group">
+            <label for="mfaEnrollCode">表示された6桁コード</label>
+            <input id="mfaEnrollCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required />
+          </div>
+          <div class="auth-actions">
+            <button class="button primary" type="submit">MFAを有効化</button>
+            <button class="button subtle" id="mfaSetupSignOutButton" type="button">ログアウト</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="auth-card hidden" id="emailVerifyPanel">
+        <p class="eyebrow">Email Verification</p>
+        <h1>メール確認が必要です</h1>
+        <p>
+          MFAを有効化する前に、登録したメールアドレスの確認を完了してください。確認メール内のリンクを開いたあと、この画面に戻って「確認しました」を押します。
+        </p>
+        <div class="auth-actions">
+          <button class="button primary" id="reloadUserButton" type="button">確認しました</button>
+          <button class="button secondary" id="sendVerificationButton" type="button">確認メールを再送</button>
+          <button class="button subtle" id="emailVerifySignOutButton" type="button">ログアウト</button>
+        </div>
+      </section>
+
+      <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="app-shell hidden" id="appShell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">¥</span>
+          <div>
+            <p class="eyebrow">Monthly Money Desk</p>
+            <h1>支払いと貯金ノート</h1>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="表示切り替え">
+          <button class="nav-tab active" type="button" data-tab="dashboard">
+            <span aria-hidden="true">▦</span>
+            <span>ダッシュボード</span>
+          </button>
+          <button class="nav-tab" type="button" data-tab="payments">
+            <span aria-hidden="true">□</span>
+            <span>支払い</span>
+          </button>
+          <button class="nav-tab" type="button" data-tab="savings">
+            <span aria-hidden="true">◇</span>
+            <span>貯金</span>
+          </button>
+          <button class="nav-tab" type="button" data-tab="nisa">
+            <span aria-hidden="true">△</span>
+            <span>つみたてNISA</span>
+          </button>
+        </nav>
+
+        <section class="settings-panel" aria-label="基本設定">
+          <div class="field-group">
+            <label for="selectedMonth">対象月</label>
+            <input id="selectedMonth" type="month" />
+          </div>
+          <div class="field-group">
+            <label for="targetYear">目標年度</label>
+            <input id="targetYear" type="number" min="2000" max="2100" />
+          </div>
+          <div class="field-group">
+            <label for="monthlyIncome">毎月の手取り目安</label>
+            <input id="monthlyIncome" type="number" min="0" step="1000" inputmode="numeric" />
+          </div>
+        </section>
+
+        <section class="account-panel" aria-label="アカウントと共有">
+          <p class="eyebrow">Account</p>
+          <strong id="accountEmail">-</strong>
+          <span id="syncStatus">同期待ち</span>
+          <div class="account-meta">
+            <span>UID</span>
+            <code id="userUid">-</code>
+          </div>
+          <div class="account-meta">
+            <span>家計ID</span>
+            <code id="householdId">-</code>
+          </div>
+          <div class="field-group">
+            <label for="switchHouseholdId">参加する家計ID</label>
+            <input id="switchHouseholdId" type="text" placeholder="共有された家計ID" />
+          </div>
+          <button class="button secondary" id="switchHouseholdButton" type="button">
+            <span aria-hidden="true">↔</span>
+            <span>家計を切替</span>
+          </button>
+          <div class="field-group">
+            <label for="memberUid">追加するメンバーUID</label>
+            <input id="memberUid" type="text" placeholder="相手のUID" />
+          </div>
+          <button class="button secondary" id="addMemberButton" type="button">
+            <span aria-hidden="true">＋</span>
+            <span>メンバー追加</span>
+          </button>
+        </section>
+
+        <div class="sidebar-actions">
+          <button class="button secondary" id="exportButton" type="button">
+            <span aria-hidden="true">↓</span>
+            <span>書き出し</span>
+          </button>
+          <label class="button secondary file-button">
+            <span aria-hidden="true">↑</span>
+            <span>読み込み</span>
+            <input id="importFile" type="file" accept="application/json" />
+          </label>
+          <button class="button subtle" id="resetButton" type="button">
+            <span aria-hidden="true">↺</span>
+            <span>初期化</span>
+          </button>
+          <button class="button subtle" id="signOutButton" type="button">
+            <span aria-hidden="true">↪</span>
+            <span>ログアウト</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="monthLabel">-</p>
+            <h2 id="viewTitle">今月の資金計画</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="button primary" type="button" data-open-form="payment">
+              <span aria-hidden="true">＋</span>
+              <span>支払い</span>
+            </button>
+            <button class="button primary" type="button" data-open-form="saving">
+              <span aria-hidden="true">＋</span>
+              <span>貯金</span>
+            </button>
+            <button class="button primary" type="button" data-open-form="nisa">
+              <span aria-hidden="true">＋</span>
+              <span>NISA</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView" data-view="dashboard" aria-label="ダッシュボード">
+          <div class="summary-grid">
+            <article class="metric-card">
+              <p>今月の支払い</p>
+              <strong id="paymentTotal">¥0</strong>
+              <span id="paymentPaidCount">0件完了</span>
+            </article>
+            <article class="metric-card">
+              <p>貯金予定</p>
+              <strong id="savingTotal">¥0</strong>
+              <span id="savingDoneCount">0件入金</span>
+            </article>
+            <article class="metric-card">
+              <p>NISA積立</p>
+              <strong id="nisaTotal">¥0</strong>
+              <span id="nisaDoneCount">0件実行</span>
+            </article>
+            <article class="metric-card balance-card">
+              <p>残り見込み</p>
+              <strong id="remainingTotal">¥0</strong>
+              <span id="incomeLabel">収入未設定</span>
+            </article>
+          </div>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Annual Goal</p>
+                <h3>貯金目標の進捗</h3>
+              </div>
+              <span class="pill" id="annualGoalTotal">年間目標 ¥0</span>
+            </div>
+            <div class="goal-stack" id="goalStack"></div>
+          </section>
+
+          <section class="split-grid">
+            <div class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">This Month</p>
+                  <h3>未完了の支払い</h3>
+                </div>
+              </div>
+              <div class="compact-list" id="upcomingPayments"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Allocation</p>
+                  <h3>月次配分</h3>
+                </div>
+              </div>
+              <div class="allocation-chart" id="allocationChart" aria-label="月次配分グラフ"></div>
+              <div class="legend" id="allocationLegend"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="paymentsView" data-view="payments" aria-label="支払い">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Recurring Payments</p>
+                <h3>毎月の支払い</h3>
+              </div>
+              <span class="pill" id="paymentsCount">0件</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>完了</th>
+                    <th>名称</th>
+                    <th>カテゴリ</th>
+                    <th>支払日</th>
+                    <th>金額</th>
+                    <th>メモ</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="savingsView" data-view="savings" aria-label="貯金">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Savings Buckets</p>
+                <h3>貯金の管理</h3>
+              </div>
+              <span class="pill" id="savingsCount">0件</span>
+            </div>
+            <div class="bucket-grid" id="savingsGrid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="nisaView" data-view="nisa" aria-label="つみたてNISA">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Investment Plan</p>
+                <h3>つみたてNISA</h3>
+              </div>
+              <span class="pill" id="nisaCount">0件</span>
+            </div>
+            <div class="bucket-grid" id="nisaGrid"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="itemDialog">
+      <form method="dialog" class="item-form" id="itemForm">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow" id="formKicker">New Item</p>
+            <h3 id="formTitle">項目を追加</h3>
+          </div>
+          <button class="icon-button" type="button" id="closeDialog" aria-label="閉じる">×</button>
+        </div>
+        <div class="form-grid" id="formFields"></div>
+        <div class="form-actions">
+          <button class="button subtle" type="button" id="cancelForm">キャンセル</button>
+          <button class="button primary" type="submit">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  getMultiFactorResolver,
+  multiFactor,
+  onAuthStateChanged,
+  sendEmailVerification,
+  signInWithEmailAndPassword,
+  signOut,
+  TotpMultiFactorGenerator,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  arrayUnion,
+  doc,
+  getDoc,
+  getFirestore,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyAeGYxyk7-99DM2pPUwmXjFf8cfTjUaQS8",
+  authDomain: "payment-manager-817e6.firebaseapp.com",
+  projectId: "payment-manager-817e6",
+  storageBucket: "payment-manager-817e6.firebasestorage.app",
+  messagingSenderId: "33238731996",
+  appId: "1:33238731996:web:1d00fdf5af88f539467819"
+};
+const typeLabels = {
+  personal: "個人貯金",
+  shared: "共有貯金",
+  reserve: "積立貯金",
+};
+
+const categoryLabels = {
+  housing: "住居",
+  utilities: "光熱・通信",
+  insurance: "保険",
+  card: "カード",
+  loan: "ローン",
+  other: "その他",
+};
+
+const yenFormatter = new Intl.NumberFormat("ja-JP", {
+  style: "currency",
+  currency: "JPY",
+  maximumFractionDigits: 0,
+});
+
+const monthFormatter = new Intl.DateTimeFormat("ja-JP", {
+  year: "numeric",
+  month: "long",
+});
+
+const today = new Date();
+const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+const sampleState = {
+  profile: {
+    selectedMonth: currentMonth,
+    targetYear: today.getFullYear(),
+    monthlyIncome: 360000,
+  },
+  payments: [
+    {
+      id: createId(),
+      name: "家賃",
+      amount: 120000,
+      dueDay: 27,
+      category: "housing",
+      memo: "口座振替",
+      active: true,
+    },
+    {
+      id: createId(),
+      name: "電気・ガス",
+      amount: 18000,
+      dueDay: 20,
+      category: "utilities",
+      memo: "季節で変動",
+      active: true,
+    },
+    {
+      id: createId(),
+      name: "クレジットカード",
+      amount: 75000,
+      dueDay: 10,
+      category: "card",
+      memo: "生活費まとめ",
+      active: true,
+    },
+  ],
+  savings: [
+    {
+      id: createId(),
+      type: "personal",
+      name: "個人の予備資金",
+      annualGoal: 600000,
+      monthlyContribution: 50000,
+      currentAmount: 250000,
+      memo: "使わない口座へ移動",
+    },
+    {
+      id: createId(),
+      type: "shared",
+      name: "共有貯金",
+      annualGoal: 840000,
+      monthlyContribution: 70000,
+      currentAmount: 420000,
+      memo: "旅行・大型支出用",
+    },
+    {
+      id: createId(),
+      type: "reserve",
+      name: "車検・家電積立",
+      annualGoal: 240000,
+      monthlyContribution: 20000,
+      currentAmount: 100000,
+      memo: "年払いに備える",
+    },
+  ],
+  nisa: [
+    {
+      id: createId(),
+      name: "全世界株式インデックス",
+      monthlyContribution: 50000,
+      annualGoal: 600000,
+      currentValue: 380000,
+      memo: "毎月1日に積立",
+    },
+  ],
+  monthlyStatus: {},
+};
+
+let state = normalizeState(sampleState);
+let activeTab = "dashboard";
+let editing = null;
+let toastTimer = null;
+let saveTimer = null;
+let firebaseApp = null;
+let auth = null;
+let db = null;
+let currentUser = null;
+let currentHouseholdId = null;
+let currentHousehold = null;
+let householdUnsubscribe = null;
+let remoteReady = false;
+let applyingRemoteState = false;
+let pendingResolver = null;
+let pendingTotpHint = null;
+let pendingEnrollmentSecret = null;
+
+const configReady = hasFirebaseConfig(firebaseConfig);
+
+const elements = {
+  authShell: document.querySelector("#authShell"),
+  appShell: document.querySelector("#appShell"),
+  firebaseSetupNotice: document.querySelector("#firebaseSetupNotice"),
+  signInPanel: document.querySelector("#signInPanel"),
+  signInForm: document.querySelector("#signInForm"),
+  authEmail: document.querySelector("#authEmail"),
+  authPassword: document.querySelector("#authPassword"),
+  createAccountButton: document.querySelector("#createAccountButton"),
+  mfaChallengePanel: document.querySelector("#mfaChallengePanel"),
+  mfaChallengeForm: document.querySelector("#mfaChallengeForm"),
+  mfaChallengeCode: document.querySelector("#mfaChallengeCode"),
+  backToSignInButton: document.querySelector("#backToSignInButton"),
+  mfaSetupPanel: document.querySelector("#mfaSetupPanel"),
+  mfaSecretKey: document.querySelector("#mfaSecretKey"),
+  mfaTotpUri: document.querySelector("#mfaTotpUri"),
+  mfaEnrollForm: document.querySelector("#mfaEnrollForm"),
+  mfaDisplayName: document.querySelector("#mfaDisplayName"),
+  mfaEnrollCode: document.querySelector("#mfaEnrollCode"),
+  mfaSetupSignOutButton: document.querySelector("#mfaSetupSignOutButton"),
+  emailVerifyPanel: document.querySelector("#emailVerifyPanel"),
+  reloadUserButton: document.querySelector("#reloadUserButton"),
+  sendVerificationButton: document.querySelector("#sendVerificationButton"),
+  emailVerifySignOutButton: document.querySelector("#emailVerifySignOutButton"),
+  authMessage: document.querySelector("#authMessage"),
+  selectedMonth: document.querySelector("#selectedMonth"),
+  targetYear: document.querySelector("#targetYear"),
+  monthlyIncome: document.querySelector("#monthlyIncome"),
+  accountEmail: document.querySelector("#accountEmail"),
+  syncStatus: document.querySelector("#syncStatus"),
+  userUid: document.querySelector("#userUid"),
+  householdId: document.querySelector("#householdId"),
+  switchHouseholdId: document.querySelector("#switchHouseholdId"),
+  switchHouseholdButton: document.querySelector("#switchHouseholdButton"),
+  memberUid: document.querySelector("#memberUid"),
+  addMemberButton: document.querySelector("#addMemberButton"),
+  signOutButton: document.querySelector("#signOutButton"),
+  monthLabel: document.querySelector("#monthLabel"),
+  viewTitle: document.querySelector("#viewTitle"),
+  paymentTotal: document.querySelector("#paymentTotal"),
+  paymentPaidCount: document.querySelector("#paymentPaidCount"),
+  savingTotal: document.querySelector("#savingTotal"),
+  savingDoneCount: document.querySelector("#savingDoneCount"),
+  nisaTotal: document.querySelector("#nisaTotal"),
+  nisaDoneCount: document.querySelector("#nisaDoneCount"),
+  remainingTotal: document.querySelector("#remainingTotal"),
+  incomeLabel: document.querySelector("#incomeLabel"),
+  annualGoalTotal: document.querySelector("#annualGoalTotal"),
+  goalStack: document.querySelector("#goalStack"),
+  upcomingPayments: document.querySelector("#upcomingPayments"),
+  allocationChart: document.querySelector("#allocationChart"),
+  allocationLegend: document.querySelector("#allocationLegend"),
+  paymentsTable: document.querySelector("#paymentsTable"),
+  paymentsCount: document.querySelector("#paymentsCount"),
+  savingsGrid: document.querySelector("#savingsGrid"),
+  savingsCount: document.querySelector("#savingsCount"),
+  nisaGrid: document.querySelector("#nisaGrid"),
+  nisaCount: document.querySelector("#nisaCount"),
+  itemDialog: document.querySelector("#itemDialog"),
+  itemForm: document.querySelector("#itemForm"),
+  formKicker: document.querySelector("#formKicker"),
+  formTitle: document.querySelector("#formTitle"),
+  formFields: document.querySelector("#formFields"),
+  toast: document.querySelector("#toast"),
+};
+
+function hasFirebaseConfig(config) {
+  return Boolean(
+    config?.apiKey &&
+      config?.authDomain &&
+      config?.projectId &&
+      !String(config.apiKey).includes("YOUR_") &&
+      !String(config.projectId).includes("YOUR_"),
+  );
+}
+
+function initializeFirebase() {
+  if (!configReady) {
+    showAuthMode("setup");
+    return;
+  }
+
+  firebaseApp = initializeApp(firebaseConfig);
+  auth = getAuth(firebaseApp);
+  db = getFirestore(firebaseApp);
+  showAuthMode("signin");
+
+  onAuthStateChanged(auth, async (user) => {
+    cleanupHouseholdSubscription();
+    currentUser = user;
+    currentHouseholdId = null;
+    currentHousehold = null;
+    remoteReady = false;
+
+    if (!user) {
+      state = normalizeState(sampleState);
+      showAuthMode("signin");
+      return;
+    }
+
+    setAccountBasics(user);
+
+    if (!user.emailVerified) {
+      await requireEmailVerification(user);
+      return;
+    }
+
+    if (!hasEnrolledMfa(user)) {
+      await beginTotpEnrollment();
+      return;
+    }
+
+    await openAuthenticatedApp(user);
+  });
+}
+
+async function openAuthenticatedApp(user) {
+  showAppShell();
+  setSyncStatus("同期準備中...");
+
+  try {
+    await ensureUserWorkspace(user);
+  } catch (error) {
+    setSyncStatus("同期エラー");
+    showToast(firebaseErrorMessage(error));
+  }
+}
+
+async function requireEmailVerification(user) {
+  showAuthMode("verifyEmail");
+
+  try {
+    await sendEmailVerification(user);
+    setAuthMessage(`${user.email} に確認メールを送信しました。`);
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+function hasEnrolledMfa(user) {
+  return multiFactor(user).enrolledFactors.length > 0;
+}
+
+async function ensureUserWorkspace(user) {
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+  let profile = userSnap.exists() ? userSnap.data() : null;
+
+  if (!profile) {
+    profile = {
+      email: user.email || "",
+      householdId: user.uid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    await setDoc(userRef, profile);
+  } else if (!profile.householdId) {
+    profile.householdId = user.uid;
+    await updateDoc(userRef, {
+      householdId: user.uid,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  currentHouseholdId = profile.householdId;
+  const householdRef = doc(db, "households", currentHouseholdId);
+  const householdSnap = await getDoc(householdRef);
+
+  if (!householdSnap.exists() && currentHouseholdId === user.uid) {
+    await setDoc(householdRef, {
+      ownerUid: user.uid,
+      members: [user.uid],
+      state: normalizeState(sampleState),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      updatedBy: user.uid,
+    });
+  }
+
+  subscribeHousehold(currentHouseholdId);
+}
+
+function subscribeHousehold(householdId) {
+  cleanupHouseholdSubscription();
+  setSyncStatus("同期中...");
+
+  const householdRef = doc(db, "households", householdId);
+  householdUnsubscribe = onSnapshot(
+    householdRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        setSyncStatus("家計データなし");
+        showToast("家計データが見つかりません。");
+        return;
+      }
+
+      currentHousehold = snapshot.data();
+      currentHouseholdId = householdId;
+      applyingRemoteState = true;
+      state = normalizeState(currentHousehold.state || sampleState);
+      remoteReady = true;
+      setSyncStatus("同期済み");
+      render();
+      applyingRemoteState = false;
+    },
+    (error) => {
+      remoteReady = false;
+      setSyncStatus("同期エラー");
+      showToast(firebaseErrorMessage(error));
+    },
+  );
+}
+
+function cleanupHouseholdSubscription() {
+  if (householdUnsubscribe) {
+    householdUnsubscribe();
+    householdUnsubscribe = null;
+  }
+}
+
+function scheduleRemoteSave() {
+  if (!remoteReady || !currentUser || !currentHouseholdId || applyingRemoteState) {
+    return;
+  }
+
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveRemoteState, 450);
+}
+
+async function saveRemoteState() {
+  if (!remoteReady || !currentUser || !currentHouseholdId) return;
+
+  try {
+    setSyncStatus("保存中...");
+    await setDoc(
+      doc(db, "households", currentHouseholdId),
+      {
+        state: normalizeState(state),
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser.uid,
+      },
+      { merge: true },
+    );
+    setSyncStatus("同期済み");
+  } catch (error) {
+    setSyncStatus("保存エラー");
+    showToast(firebaseErrorMessage(error));
+  }
+}
+
+function normalizeState(input) {
+  const base = cloneState(sampleState);
+  const next = {
+    ...base,
+    ...(input || {}),
+    profile: {
+      ...base.profile,
+      ...(input?.profile || {}),
+    },
+    payments: Array.isArray(input?.payments) ? input.payments : base.payments,
+    savings: Array.isArray(input?.savings) ? input.savings : base.savings,
+    nisa: Array.isArray(input?.nisa) ? input.nisa : base.nisa,
+    monthlyStatus: input?.monthlyStatus || {},
+  };
+
+  next.payments = next.payments.map((payment) => ({
+    id: payment.id || createId(),
+    active: true,
+    ...payment,
+  }));
+  next.savings = next.savings.map((saving) => ({
+    id: saving.id || createId(),
+    type: saving.type || "personal",
+    ...saving,
+  }));
+  next.nisa = next.nisa.map((item) => ({
+    id: item.id || createId(),
+    ...item,
+  }));
+
+  return next;
+}
+
+function cloneState(value) {
+  return typeof structuredClone === "function"
+    ? structuredClone(value)
+    : JSON.parse(JSON.stringify(value));
+}
+
+function saveState() {
+  scheduleRemoteSave();
+}
+
+function createId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function formatYen(value) {
+  return yenFormatter.format(Number(value) || 0);
+}
+
+function parseAmount(value) {
+  return Math.max(0, Math.round(Number(value) || 0));
+}
+
+function selectedMonthStatus() {
+  const month = state.profile.selectedMonth || currentMonth;
+  const existing = state.monthlyStatus[month] || {};
+  state.monthlyStatus[month] = {
+    payments: existing.payments || {},
+    savings: existing.savings || {},
+    nisa: existing.nisa || {},
+  };
+
+  return state.monthlyStatus[month];
+}
+
+function getYearMonths(year) {
+  return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
+}
+
+function sum(list, accessor) {
+  return list.reduce((total, item) => total + accessor(item), 0);
+}
+
+function activePayments() {
+  return state.payments.filter((payment) => payment.active !== false);
+}
+
+function savingsByType(type) {
+  return state.savings.filter((saving) => saving.type === type);
+}
+
+function paidYearTotal(collectionName, itemId, amountKey, year) {
+  return getYearMonths(year).reduce((total, month) => {
+    const monthStatus = state.monthlyStatus[month];
+    const itemList = collectionName === "nisa" ? state.nisa : state.savings;
+    const item = itemList.find((entry) => entry.id === itemId);
+    if (!monthStatus || !monthStatus[collectionName]?.[itemId] || !item) return total;
+    return total + parseAmount(item[amountKey]);
+  }, 0);
+}
+
+function render() {
+  const selectedDate = new Date(`${state.profile.selectedMonth || currentMonth}-01T00:00:00`);
+  elements.selectedMonth.value = state.profile.selectedMonth || currentMonth;
+  elements.targetYear.value = state.profile.targetYear || today.getFullYear();
+  elements.monthlyIncome.value = state.profile.monthlyIncome || 0;
+  elements.monthLabel.textContent = monthFormatter.format(selectedDate);
+  elements.viewTitle.textContent = getViewTitle();
+
+  renderAccountPanel();
+  renderDashboard();
+  renderPayments();
+  renderSavings();
+  renderNisa();
+  saveState();
+}
+
+function renderAccountPanel() {
+  const ownerUid = currentHousehold?.ownerUid || "";
+  const isOwner = currentUser?.uid && ownerUid === currentUser.uid;
+  elements.accountEmail.textContent = currentUser?.email || "-";
+  elements.userUid.textContent = currentUser?.uid || "-";
+  elements.householdId.textContent = currentHouseholdId || "-";
+  elements.addMemberButton.disabled = !isOwner;
+  elements.memberUid.disabled = !isOwner;
+  elements.addMemberButton.title = isOwner ? "" : "メンバー追加は家計オーナーだけが実行できます。";
+}
+
+function setAccountBasics(user) {
+  elements.accountEmail.textContent = user.email || "-";
+  elements.userUid.textContent = user.uid;
+}
+
+function setSyncStatus(message) {
+  elements.syncStatus.textContent = message;
+}
+
+function getViewTitle() {
+  const titles = {
+    dashboard: "今月の資金計画",
+    payments: "毎月の支払い",
+    savings: "貯金の管理",
+    nisa: "つみたてNISA",
+  };
+  return titles[activeTab];
+}
+
+function renderDashboard() {
+  const status = selectedMonthStatus();
+  const payments = activePayments();
+  const paymentTotal = sum(payments, (payment) => parseAmount(payment.amount));
+  const savingTotal = sum(state.savings, (saving) => parseAmount(saving.monthlyContribution));
+  const nisaTotal = sum(state.nisa, (item) => parseAmount(item.monthlyContribution));
+  const commitments = paymentTotal + savingTotal + nisaTotal;
+  const remaining = parseAmount(state.profile.monthlyIncome) - commitments;
+  const paidPayments = payments.filter((payment) => status.payments[payment.id]).length;
+  const doneSavings = state.savings.filter((saving) => status.savings[saving.id]).length;
+  const doneNisa = state.nisa.filter((item) => status.nisa[item.id]).length;
+
+  elements.paymentTotal.textContent = formatYen(paymentTotal);
+  elements.paymentPaidCount.textContent = `${paidPayments}/${payments.length}件完了`;
+  elements.savingTotal.textContent = formatYen(savingTotal);
+  elements.savingDoneCount.textContent = `${doneSavings}/${state.savings.length}件入金`;
+  elements.nisaTotal.textContent = formatYen(nisaTotal);
+  elements.nisaDoneCount.textContent = `${doneNisa}/${state.nisa.length}件実行`;
+  elements.remainingTotal.textContent = formatYen(remaining);
+  elements.incomeLabel.textContent = state.profile.monthlyIncome
+    ? `${formatYen(state.profile.monthlyIncome)}から差引`
+    : "収入未設定";
+  elements.remainingTotal.style.color = remaining < 0 ? "#ffd6df" : "#ffffff";
+
+  renderAnnualGoals();
+  renderUpcomingPayments(payments, status);
+  renderAllocation(paymentTotal, savingTotal, nisaTotal);
+}
+
+function renderAnnualGoals() {
+  const year = Number(state.profile.targetYear) || today.getFullYear();
+  const groups = [
+    { key: "personal", label: typeLabels.personal, color: "var(--blue)" },
+    { key: "shared", label: typeLabels.shared, color: "var(--green)" },
+    { key: "reserve", label: typeLabels.reserve, color: "var(--amber)" },
+    { key: "nisa", label: "つみたてNISA", color: "var(--rose)" },
+  ];
+
+  const annualGoal =
+    sum(state.savings, (saving) => parseAmount(saving.annualGoal)) +
+    sum(state.nisa, (item) => parseAmount(item.annualGoal));
+  elements.annualGoalTotal.textContent = `年間目標 ${formatYen(annualGoal)}`;
+
+  elements.goalStack.innerHTML = groups
+    .map((group) => {
+      const items = group.key === "nisa" ? state.nisa : savingsByType(group.key);
+      const goal = sum(items, (item) => parseAmount(item.annualGoal));
+      const actual = sum(items, (item) =>
+        group.key === "nisa"
+          ? paidYearTotal("nisa", item.id, "monthlyContribution", year)
+          : paidYearTotal("savings", item.id, "monthlyContribution", year),
+      );
+      const percent = goal > 0 ? Math.min(100, Math.round((actual / goal) * 100)) : 0;
+      return `
+        <div class="goal-row">
+          <div class="goal-row-header">
+            <span>${group.label}</span>
+            <span>${formatYen(actual)} / ${formatYen(goal)} (${percent}%)</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${percent}%; background: ${group.color}"></div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderUpcomingPayments(payments, status) {
+  const upcoming = payments
+    .filter((payment) => !status.payments[payment.id])
+    .sort((a, b) => Number(a.dueDay) - Number(b.dueDay));
+
+  if (!upcoming.length) {
+    elements.upcomingPayments.innerHTML = `<div class="empty-state">今月の支払いはすべて完了しています。</div>`;
+    return;
+  }
+
+  elements.upcomingPayments.innerHTML = upcoming
+    .map(
+      (payment) => `
+        <div class="list-item">
+          <div class="list-main">
+            <strong>${escapeHtml(payment.name)}</strong>
+            <span>${categoryLabels[payment.category] || "その他"}・毎月${payment.dueDay}日</span>
+          </div>
+          <strong>${formatYen(payment.amount)}</strong>
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderAllocation(paymentTotal, savingTotal, nisaTotal) {
+  const items = [
+    { label: "支払い", value: paymentTotal, color: "var(--teal)" },
+    { label: "貯金", value: savingTotal, color: "var(--green)" },
+    { label: "NISA", value: nisaTotal, color: "var(--rose)" },
+  ];
+  const total = sum(items, (item) => item.value);
+
+  elements.allocationChart.innerHTML = items
+    .map((item) => {
+      const width = total > 0 ? (item.value / total) * 100 : 0;
+      return `<span class="allocation-segment" style="width: ${width}%; background: ${item.color}"></span>`;
+    })
+    .join("");
+
+  elements.allocationLegend.innerHTML = items
+    .map((item) => {
+      const percent = total > 0 ? Math.round((item.value / total) * 100) : 0;
+      return `
+        <div class="legend-item">
+          <span class="legend-label">
+            <span class="legend-dot" style="background: ${item.color}"></span>
+            <span>${item.label}</span>
+          </span>
+          <span>${formatYen(item.value)}・${percent}%</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderPayments() {
+  const status = selectedMonthStatus();
+  const payments = activePayments().sort((a, b) => Number(a.dueDay) - Number(b.dueDay));
+  elements.paymentsCount.textContent = `${payments.length}件`;
+
+  if (!payments.length) {
+    elements.paymentsTable.innerHTML = `<tr><td colspan="7"><div class="empty-state">支払い項目がありません。</div></td></tr>`;
+    return;
+  }
+
+  elements.paymentsTable.innerHTML = payments
+    .map(
+      (payment) => `
+        <tr>
+          <td>
+            <label class="check-wrap" aria-label="${escapeHtml(payment.name)}を完了">
+              <input type="checkbox" data-status="payment" data-id="${payment.id}" ${status.payments[payment.id] ? "checked" : ""} />
+            </label>
+          </td>
+          <td><strong>${escapeHtml(payment.name)}</strong></td>
+          <td>${categoryLabels[payment.category] || "その他"}</td>
+          <td>毎月${payment.dueDay}日</td>
+          <td class="amount-cell">${formatYen(payment.amount)}</td>
+          <td>${escapeHtml(payment.memo || "")}</td>
+          <td class="action-cell">
+            <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
+            <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
+          </td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function renderSavings() {
+  const status = selectedMonthStatus();
+  elements.savingsCount.textContent = `${state.savings.length}件`;
+
+  if (!state.savings.length) {
+    elements.savingsGrid.innerHTML = `<div class="empty-state">貯金項目がありません。</div>`;
+    return;
+  }
+
+  elements.savingsGrid.innerHTML = state.savings
+    .map((saving) => {
+      const yearly = paidYearTotal("savings", saving.id, "monthlyContribution", state.profile.targetYear);
+      const percent = saving.annualGoal > 0 ? Math.min(100, Math.round((yearly / saving.annualGoal) * 100)) : 0;
+      return `
+        <article class="bucket-card">
+          <div class="bucket-top">
+            <strong>${escapeHtml(saving.name)}</strong>
+            <span class="tag ${saving.type}">${typeLabels[saving.type]}</span>
+          </div>
+          <div class="bucket-amount">
+            <span>今月の積立</span>
+            <strong>${formatYen(saving.monthlyContribution)}</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${percent}%; background: ${savingTypeColor(saving.type)}"></div>
+          </div>
+          <div class="bucket-meta">
+            <span>今年 ${formatYen(yearly)}</span>
+            <span>目標 ${formatYen(saving.annualGoal)}</span>
+          </div>
+          <div class="bucket-meta">
+            <span>現在残高</span>
+            <strong>${formatYen(saving.currentAmount)}</strong>
+          </div>
+          <p class="bucket-note">${escapeHtml(saving.memo || "")}</p>
+          <div class="card-actions">
+            <button class="small-button" type="button" data-toggle="saving" data-id="${saving.id}">
+              ${status.savings[saving.id] ? "今月入金済み" : "今月入金"}
+            </button>
+            <button class="small-button" type="button" data-edit="saving" data-id="${saving.id}">編集</button>
+            <button class="small-button danger" type="button" data-delete="saving" data-id="${saving.id}">削除</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderNisa() {
+  const status = selectedMonthStatus();
+  elements.nisaCount.textContent = `${state.nisa.length}件`;
+
+  if (!state.nisa.length) {
+    elements.nisaGrid.innerHTML = `<div class="empty-state">NISA項目がありません。</div>`;
+    return;
+  }
+
+  elements.nisaGrid.innerHTML = state.nisa
+    .map((item) => {
+      const yearly = paidYearTotal("nisa", item.id, "monthlyContribution", state.profile.targetYear);
+      const percent = item.annualGoal > 0 ? Math.min(100, Math.round((yearly / item.annualGoal) * 100)) : 0;
+      return `
+        <article class="bucket-card">
+          <div class="bucket-top">
+            <strong>${escapeHtml(item.name)}</strong>
+            <span class="tag nisa">NISA</span>
+          </div>
+          <div class="bucket-amount">
+            <span>毎月の積立</span>
+            <strong>${formatYen(item.monthlyContribution)}</strong>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${percent}%; background: var(--rose)"></div>
+          </div>
+          <div class="bucket-meta">
+            <span>今年 ${formatYen(yearly)}</span>
+            <span>目標 ${formatYen(item.annualGoal)}</span>
+          </div>
+          <div class="bucket-meta">
+            <span>評価額</span>
+            <strong>${formatYen(item.currentValue)}</strong>
+          </div>
+          <p class="bucket-note">${escapeHtml(item.memo || "")}</p>
+          <div class="card-actions">
+            <button class="small-button" type="button" data-toggle="nisa" data-id="${item.id}">
+              ${status.nisa[item.id] ? "今月実行済み" : "今月実行"}
+            </button>
+            <button class="small-button" type="button" data-edit="nisa" data-id="${item.id}">編集</button>
+            <button class="small-button danger" type="button" data-delete="nisa" data-id="${item.id}">削除</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function savingTypeColor(type) {
+  return {
+    personal: "var(--blue)",
+    shared: "var(--green)",
+    reserve: "var(--amber)",
+  }[type];
+}
+
+function openForm(kind, id = null) {
+  editing = { kind, id };
+  const item = id ? getCollection(kind).find((entry) => entry.id === id) : null;
+  const isEdit = Boolean(item);
+
+  elements.formKicker.textContent = isEdit ? "Edit Item" : "New Item";
+  elements.formTitle.textContent = formTitle(kind, isEdit);
+  elements.formFields.innerHTML = formFields(kind, item);
+  elements.itemDialog.showModal();
+}
+
+function formTitle(kind, isEdit) {
+  const action = isEdit ? "編集" : "追加";
+  return {
+    payment: `支払いを${action}`,
+    saving: `貯金を${action}`,
+    nisa: `NISAを${action}`,
+  }[kind];
+}
+
+function formFields(kind, item) {
+  if (kind === "payment") {
+    return `
+      ${textField("name", "名称", item?.name || "", "例: 家賃")}
+      ${numberField("amount", "金額", item?.amount || "", "1000")}
+      ${numberField("dueDay", "支払日", item?.dueDay || 1, "1")}
+      <div class="field-group">
+        <label for="category">カテゴリ</label>
+        <select id="category" name="category">
+          ${Object.entries(categoryLabels)
+            .map(([value, label]) => `<option value="${value}" ${item?.category === value ? "selected" : ""}>${label}</option>`)
+            .join("")}
+        </select>
+      </div>
+      ${memoField(item?.memo || "")}
+    `;
+  }
+
+  if (kind === "saving") {
+    return `
+      ${textField("name", "名称", item?.name || "", "例: 共有貯金")}
+      <div class="field-group">
+        <label for="type">種類</label>
+        <select id="type" name="type">
+          ${Object.entries(typeLabels)
+            .map(([value, label]) => `<option value="${value}" ${item?.type === value ? "selected" : ""}>${label}</option>`)
+            .join("")}
+        </select>
+      </div>
+      ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+      ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
+      ${numberField("currentAmount", "現在残高", item?.currentAmount || "", "1000")}
+      ${memoField(item?.memo || "")}
+    `;
+  }
+
+  return `
+    ${textField("name", "銘柄・目的", item?.name || "", "例: 全世界株式インデックス")}
+    ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+    ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
+    ${numberField("currentValue", "評価額", item?.currentValue || "", "1000")}
+    ${memoField(item?.memo || "")}
+  `;
+}
+
+function textField(name, label, value, placeholder) {
+  return `
+    <div class="field-group">
+      <label for="${name}">${label}</label>
+      <input id="${name}" name="${name}" type="text" value="${escapeAttribute(value)}" placeholder="${placeholder}" required />
+    </div>
+  `;
+}
+
+function numberField(name, label, value, step) {
+  return `
+    <div class="field-group">
+      <label for="${name}">${label}</label>
+      <input id="${name}" name="${name}" type="number" min="0" step="${step}" inputmode="numeric" value="${escapeAttribute(value)}" required />
+    </div>
+  `;
+}
+
+function memoField(value) {
+  return `
+    <div class="field-group span-2">
+      <label for="memo">メモ</label>
+      <textarea id="memo" name="memo" placeholder="任意">${escapeHtml(value)}</textarea>
+    </div>
+  `;
+}
+
+function handleFormSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.itemForm);
+  const collection = getCollection(editing.kind);
+  const current = editing.id ? collection.find((item) => item.id === editing.id) : null;
+  const nextItem = buildItem(editing.kind, formData, current);
+
+  if (current) {
+    Object.assign(current, nextItem);
+    showToast("更新しました。");
+  } else {
+    collection.push({ id: createId(), ...nextItem });
+    showToast("追加しました。");
+  }
+
+  elements.itemDialog.close();
+  render();
+}
+
+function buildItem(kind, formData, current) {
+  if (kind === "payment") {
+    return {
+      name: formData.get("name").trim(),
+      amount: parseAmount(formData.get("amount")),
+      dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
+      category: formData.get("category"),
+      memo: formData.get("memo").trim(),
+      active: current?.active ?? true,
+    };
+  }
+
+  if (kind === "saving") {
+    return {
+      name: formData.get("name").trim(),
+      type: formData.get("type"),
+      monthlyContribution: parseAmount(formData.get("monthlyContribution")),
+      annualGoal: parseAmount(formData.get("annualGoal")),
+      currentAmount: parseAmount(formData.get("currentAmount")),
+      memo: formData.get("memo").trim(),
+    };
+  }
+
+  return {
+    name: formData.get("name").trim(),
+    monthlyContribution: parseAmount(formData.get("monthlyContribution")),
+    annualGoal: parseAmount(formData.get("annualGoal")),
+    currentValue: parseAmount(formData.get("currentValue")),
+    memo: formData.get("memo").trim(),
+  };
+}
+
+function getCollection(kind) {
+  return {
+    payment: state.payments,
+    saving: state.savings,
+    nisa: state.nisa,
+  }[kind];
+}
+
+function statusKey(kind) {
+  return {
+    payment: "payments",
+    saving: "savings",
+    nisa: "nisa",
+  }[kind];
+}
+
+function deleteItem(kind, id) {
+  const collection = getCollection(kind);
+  const item = collection.find((entry) => entry.id === id);
+  if (!item) return;
+
+  const confirmed = window.confirm(`${item.name}を削除しますか？`);
+  if (!confirmed) return;
+
+  const index = collection.findIndex((entry) => entry.id === id);
+  collection.splice(index, 1);
+  Object.values(state.monthlyStatus).forEach((monthStatus) => {
+    const key = statusKey(kind);
+    delete monthStatus[key]?.[id];
+  });
+  showToast("削除しました。");
+  render();
+}
+
+function toggleStatus(kind, id, checked = null) {
+  const status = selectedMonthStatus();
+  const key = statusKey(kind);
+  const nextValue = checked ?? !status[key][id];
+  status[key][id] = nextValue;
+  showToast(nextValue ? "今月分を完了にしました。" : "今月分を未完了に戻しました。");
+  render();
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".nav-tab").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tab === tab);
+  });
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("active", view.dataset.view === tab);
+  });
+  render();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `支払いと貯金ノート-${state.profile.selectedMonth}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+  showToast("JSONを書き出しました。");
+}
+
+function importData(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      state = normalizeState(imported);
+      showToast("データを読み込みました。");
+      render();
+    } catch {
+      showToast("読み込みに失敗しました。");
+    }
+  });
+  reader.readAsText(file);
+}
+
+function resetData() {
+  const confirmed = window.confirm("サンプル状態に戻しますか？現在の保存データは上書きされます。");
+  if (!confirmed) return;
+  state = normalizeState(sampleState);
+  showToast("初期状態に戻しました。");
+  render();
+}
+
+async function handleSignIn(event) {
+  event.preventDefault();
+  setAuthMessage("ログイン中...");
+
+  try {
+    await signInWithEmailAndPassword(auth, elements.authEmail.value.trim(), elements.authPassword.value);
+    setAuthMessage("");
+  } catch (error) {
+    if (error.code === "auth/multi-factor-auth-required") {
+      prepareMfaChallenge(error);
+      return;
+    }
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+async function createAccount() {
+  const email = elements.authEmail.value.trim();
+  const password = elements.authPassword.value;
+
+  if (!email || password.length < 6) {
+    setAuthMessage("メールアドレスと6文字以上のパスワードを入力してください。", true);
+    return;
+  }
+
+  try {
+    setAuthMessage("アカウントを作成しています...");
+    await createUserWithEmailAndPassword(auth, email, password);
+    setAuthMessage("アカウントを作成しました。確認メールを開いてからMFAを登録してください。");
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+function prepareMfaChallenge(error) {
+  pendingResolver = getMultiFactorResolver(auth, error);
+  pendingTotpHint = pendingResolver.hints.find(
+    (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID,
+  );
+
+  if (!pendingTotpHint) {
+    setAuthMessage("このアプリは認証アプリ方式のMFAに対応しています。Firebase側のMFA設定を確認してください。", true);
+    return;
+  }
+
+  showAuthMode("challenge");
+  setAuthMessage("認証アプリの6桁コードを入力してください。");
+  elements.mfaChallengeCode.focus();
+}
+
+async function resolveMfaChallenge(event) {
+  event.preventDefault();
+
+  if (!pendingResolver || !pendingTotpHint) {
+    setAuthMessage("MFAセッションが見つかりません。もう一度ログインしてください。", true);
+    showAuthMode("signin");
+    return;
+  }
+
+  try {
+    const assertion = TotpMultiFactorGenerator.assertionForSignIn(
+      pendingTotpHint.uid,
+      elements.mfaChallengeCode.value.trim(),
+    );
+    await pendingResolver.resolveSignIn(assertion);
+    pendingResolver = null;
+    pendingTotpHint = null;
+    elements.mfaChallengeCode.value = "";
+    setAuthMessage("");
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+async function beginTotpEnrollment() {
+  showAuthMode("setupMfa");
+  setAuthMessage("認証アプリの登録準備中...");
+
+  try {
+    pendingEnrollmentSecret = await TotpMultiFactorGenerator.generateSecret(
+      await multiFactor(currentUser).getSession(),
+    );
+    const accountName = currentUser.email || currentUser.uid;
+    const issuer = "支払いと貯金ノート";
+    elements.mfaSecretKey.textContent = pendingEnrollmentSecret.secretKey;
+    elements.mfaTotpUri.value = pendingEnrollmentSecret.generateQrCodeUrl(accountName, issuer);
+    setAuthMessage("秘密鍵を認証アプリに登録して、表示された6桁コードを入力してください。");
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+async function completeTotpEnrollment(event) {
+  event.preventDefault();
+
+  if (!pendingEnrollmentSecret || !currentUser) {
+    setAuthMessage("MFA登録セッションが見つかりません。ログインし直してください。", true);
+    return;
+  }
+
+  try {
+    const assertion = TotpMultiFactorGenerator.assertionForEnrollment(
+      pendingEnrollmentSecret,
+      elements.mfaEnrollCode.value.trim(),
+    );
+    await multiFactor(currentUser).enroll(assertion, elements.mfaDisplayName.value.trim() || "認証アプリ");
+    await currentUser.reload();
+    pendingEnrollmentSecret = null;
+    elements.mfaEnrollCode.value = "";
+    setAuthMessage("MFAを有効化しました。");
+    await openAuthenticatedApp(auth.currentUser);
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+async function handleSwitchHousehold() {
+  const targetId = elements.switchHouseholdId.value.trim();
+  if (!targetId || !currentUser) return;
+
+  try {
+    setSyncStatus("家計IDを確認中...");
+    await getDoc(doc(db, "households", targetId));
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      householdId: targetId,
+      updatedAt: serverTimestamp(),
+    });
+    currentHouseholdId = targetId;
+    elements.switchHouseholdId.value = "";
+    subscribeHousehold(targetId);
+    showToast("家計IDを切り替えました。");
+  } catch (error) {
+    setSyncStatus("切替エラー");
+    showToast("この家計IDに参加できません。オーナーにUID追加を依頼してください。");
+  }
+}
+
+async function handleAddMember() {
+  const uid = elements.memberUid.value.trim();
+  if (!uid || !currentHouseholdId) return;
+
+  try {
+    await updateDoc(doc(db, "households", currentHouseholdId), {
+      members: arrayUnion(uid),
+      updatedAt: serverTimestamp(),
+      updatedBy: currentUser.uid,
+    });
+    elements.memberUid.value = "";
+    showToast("メンバーを追加しました。");
+  } catch (error) {
+    showToast(firebaseErrorMessage(error));
+  }
+}
+
+async function handleSignOut() {
+  cleanupHouseholdSubscription();
+  await signOut(auth);
+}
+
+async function reloadUserAfterVerification() {
+  if (!auth.currentUser) return;
+
+  try {
+    await auth.currentUser.reload();
+    currentUser = auth.currentUser;
+
+    if (!currentUser.emailVerified) {
+      setAuthMessage("まだメール確認が完了していません。確認リンクを開いてから再度押してください。", true);
+      return;
+    }
+
+    await beginTotpEnrollment();
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+async function resendVerificationEmail() {
+  if (!auth.currentUser) return;
+
+  try {
+    await sendEmailVerification(auth.currentUser);
+    setAuthMessage(`${auth.currentUser.email} に確認メールを再送しました。`);
+  } catch (error) {
+    setAuthMessage(firebaseErrorMessage(error), true);
+  }
+}
+
+function showAuthMode(mode) {
+  elements.authShell.classList.remove("hidden");
+  elements.appShell.classList.add("hidden");
+  elements.firebaseSetupNotice.classList.toggle("hidden", mode !== "setup");
+  elements.signInPanel.classList.toggle("hidden", mode !== "signin");
+  elements.mfaChallengePanel.classList.toggle("hidden", mode !== "challenge");
+  elements.mfaSetupPanel.classList.toggle("hidden", mode !== "setupMfa");
+  elements.emailVerifyPanel.classList.toggle("hidden", mode !== "verifyEmail");
+}
+
+function showAppShell() {
+  elements.authShell.classList.add("hidden");
+  elements.appShell.classList.remove("hidden");
+  setAuthMessage("");
+}
+
+function setAuthMessage(message, isError = false) {
+  elements.authMessage.textContent = message;
+  elements.authMessage.classList.toggle("error", isError);
+}
+
+function showToast(message) {
+  window.clearTimeout(toastTimer);
+  elements.toast.textContent = message;
+  elements.toast.classList.add("show");
+  toastTimer = window.setTimeout(() => {
+    elements.toast.classList.remove("show");
+  }, 2200);
+}
+
+function firebaseErrorMessage(error) {
+  const messages = {
+    "auth/email-already-in-use": "このメールアドレスはすでに使われています。",
+    "auth/invalid-credential": "メールアドレス、パスワード、または認証コードが正しくありません。",
+    "auth/invalid-email": "メールアドレスの形式を確認してください。",
+    "auth/invalid-verification-code": "認証コードが正しくありません。",
+    "auth/missing-multi-factor-info": "MFA情報が見つかりません。",
+    "auth/operation-not-allowed": "Firebase側でメール/パスワード認証、またはTOTP MFAが有効になっていません。READMEのMFA有効化手順を確認してください。",
+    "auth/too-many-requests": "試行回数が多すぎます。少し時間を置いてください。",
+    "auth/weak-password": "パスワードは6文字以上にしてください。",
+    "permission-denied": "Firestoreの権限がありません。ルールとメンバー設定を確認してください。",
+  };
+
+  return messages[error?.code] || error?.message || "エラーが発生しました。";
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value);
+}
+
+document.querySelectorAll(".nav-tab").forEach((button) => {
+  button.addEventListener("click", () => switchTab(button.dataset.tab));
+});
+
+document.querySelectorAll("[data-open-form]").forEach((button) => {
+  button.addEventListener("click", () => openForm(button.dataset.openForm));
+});
+
+elements.signInForm.addEventListener("submit", handleSignIn);
+elements.createAccountButton.addEventListener("click", createAccount);
+elements.mfaChallengeForm.addEventListener("submit", resolveMfaChallenge);
+elements.backToSignInButton.addEventListener("click", () => showAuthMode("signin"));
+elements.mfaEnrollForm.addEventListener("submit", completeTotpEnrollment);
+elements.mfaSetupSignOutButton.addEventListener("click", handleSignOut);
+elements.reloadUserButton.addEventListener("click", reloadUserAfterVerification);
+elements.sendVerificationButton.addEventListener("click", resendVerificationEmail);
+elements.emailVerifySignOutButton.addEventListener("click", handleSignOut);
+elements.switchHouseholdButton.addEventListener("click", handleSwitchHousehold);
+elements.addMemberButton.addEventListener("click", handleAddMember);
+elements.signOutButton.addEventListener("click", handleSignOut);
+
+elements.selectedMonth.addEventListener("change", (event) => {
+  state.profile.selectedMonth = event.target.value || currentMonth;
+  render();
+});
+
+elements.targetYear.addEventListener("change", (event) => {
+  state.profile.targetYear = Number(event.target.value) || today.getFullYear();
+  render();
+});
+
+elements.monthlyIncome.addEventListener("change", (event) => {
+  state.profile.monthlyIncome = parseAmount(event.target.value);
+  render();
+});
+
+document.addEventListener("click", (event) => {
+  const editButton = event.target.closest("[data-edit]");
+  if (editButton) {
+    openForm(editButton.dataset.edit, editButton.dataset.id);
+    return;
+  }
+
+  const deleteButton = event.target.closest("[data-delete]");
+  if (deleteButton) {
+    deleteItem(deleteButton.dataset.delete, deleteButton.dataset.id);
+    return;
+  }
+
+  const toggleButton = event.target.closest("[data-toggle]");
+  if (toggleButton) {
+    toggleStatus(toggleButton.dataset.toggle, toggleButton.dataset.id);
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const statusInput = event.target.closest("[data-status]");
+  if (statusInput) {
+    toggleStatus(statusInput.dataset.status, statusInput.dataset.id, statusInput.checked);
+  }
+});
+
+elements.itemForm.addEventListener("submit", handleFormSubmit);
+document.querySelector("#closeDialog").addEventListener("click", () => elements.itemDialog.close());
+document.querySelector("#cancelForm").addEventListener("click", () => elements.itemDialog.close());
+document.querySelector("#exportButton").addEventListener("click", exportData);
+document.querySelector("#importFile").addEventListener("change", (event) => importData(event.target.files[0]));
+document.querySelector("#resetButton").addEventListener("click", resetData);
+
+initializeFirebase();
+
+    </script>
+  </body>
+</html>
