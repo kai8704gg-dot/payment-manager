@@ -303,6 +303,53 @@ code {
   font-weight: 900;
 }
 
+.settings-form {
+  padding: 20px;
+}
+
+.settings-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.settings-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h4,
+.status-group-heading h4 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.section-heading span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.csv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .field-group {
   display: grid;
   gap: 7px;
@@ -787,6 +834,106 @@ tr.is-dragging td {
   font-weight: 800;
 }
 
+.status-cell {
+  min-width: 118px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.status-chip.done {
+  border-color: #bad8c6;
+  background: #e8f5ef;
+  color: var(--green);
+}
+
+.status-chip.pending {
+  border-color: #edcf9e;
+  background: #fff7e8;
+  color: #8a520f;
+}
+
+.status-chip:hover {
+  filter: brightness(0.98);
+}
+
+tr.is-complete td,
+.bucket-card.is-complete {
+  background: #f7fbf8;
+}
+
+.status-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.status-group {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 12px;
+}
+
+.status-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.status-list {
+  display: grid;
+  gap: 8px;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.status-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.status-row-main {
+  min-width: 0;
+}
+
+.status-row-main strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.status-row-main span,
+.status-row-amount {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .check-wrap {
   display: inline-grid;
   place-items: center;
@@ -958,6 +1105,10 @@ tr.is-dragging td {
   box-shadow: 0 28px 70px rgba(23, 33, 28, 0.22);
 }
 
+.settings-modal {
+  width: min(780px, calc(100vw - 28px));
+}
+
 .modal::backdrop {
   background: rgba(18, 29, 24, 0.42);
 }
@@ -1021,6 +1172,10 @@ tr.is-dragging td {
   .bucket-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .status-overview {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 860px) {
@@ -1074,6 +1229,7 @@ tr.is-dragging td {
   .settings-panel,
   .summary-grid,
   .bucket-grid,
+  .csv-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1123,6 +1279,15 @@ tr.is-dragging td {
 
   .pill {
     white-space: normal;
+  }
+
+  .status-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .status-row .status-chip {
+    justify-self: start;
   }
 
   .table-wrap {
@@ -1179,7 +1344,7 @@ tr.is-dragging td {
   }
 }
 
-    </style>
+</style>
   </head>
   <body>
     <div class="auth-shell" id="authShell">
@@ -1312,55 +1477,6 @@ tr.is-dragging td {
           </div>
         </section>
 
-        <section class="account-panel" aria-label="アカウントと共有">
-          <p class="eyebrow">Account</p>
-          <strong id="accountEmail">-</strong>
-          <span id="syncStatus">同期待ち</span>
-          <div class="account-meta">
-            <span>UID</span>
-            <code id="userUid">-</code>
-          </div>
-          <div class="account-meta">
-            <span>家計ID</span>
-            <code id="householdId">-</code>
-          </div>
-          <div class="field-group">
-            <label for="switchHouseholdId">参加する家計ID</label>
-            <input id="switchHouseholdId" type="text" placeholder="共有された家計ID" />
-          </div>
-          <button class="button secondary" id="switchHouseholdButton" type="button">
-            <span aria-hidden="true">↔</span>
-            <span>家計を切替</span>
-          </button>
-          <div class="field-group">
-            <label for="memberUid">追加するメンバーUID</label>
-            <input id="memberUid" type="text" placeholder="相手のUID" />
-          </div>
-          <button class="button secondary" id="addMemberButton" type="button">
-            <span aria-hidden="true">＋</span>
-            <span>メンバー追加</span>
-          </button>
-        </section>
-
-        <div class="sidebar-actions">
-          <button class="button secondary" id="exportButton" type="button">
-            <span aria-hidden="true">↓</span>
-            <span>書き出し</span>
-          </button>
-          <label class="button secondary file-button">
-            <span aria-hidden="true">↑</span>
-            <span>読み込み</span>
-            <input id="importFile" type="file" accept="application/json" />
-          </label>
-          <button class="button subtle" id="resetButton" type="button">
-            <span aria-hidden="true">↺</span>
-            <span>初期化</span>
-          </button>
-          <button class="button subtle" id="signOutButton" type="button">
-            <span aria-hidden="true">↪</span>
-            <span>ログアウト</span>
-          </button>
-        </div>
       </aside>
 
       <main class="main-content">
@@ -1370,17 +1486,21 @@ tr.is-dragging td {
             <h2 id="viewTitle">今月の資金計画</h2>
           </div>
           <div class="topbar-actions">
-            <button class="button primary" type="button" data-open-form="payment">
-              <span aria-hidden="true">＋</span>
-              <span>支払い</span>
+            <button class="button secondary" id="copyPreviousMonthButton" type="button">
+              <span aria-hidden="true">←</span>
+              <span>前月コピー</span>
             </button>
-            <button class="button primary" type="button" data-open-form="saving">
+            <button class="button primary hidden" id="contextAddButton" type="button" data-open-form="">
               <span aria-hidden="true">＋</span>
-              <span>貯金</span>
+              <span id="contextAddLabel">追加</span>
             </button>
-            <button class="button primary" type="button" data-open-form="nisa">
-              <span aria-hidden="true">＋</span>
-              <span>NISA</span>
+            <button class="button secondary" id="openSettingsButton" type="button">
+              <span aria-hidden="true">⚙</span>
+              <span>設定</span>
+            </button>
+            <button class="button subtle" id="signOutButton" type="button">
+              <span aria-hidden="true">↪</span>
+              <span>ログアウト</span>
             </button>
           </div>
         </header>
@@ -1418,6 +1538,17 @@ tr.is-dragging td {
               <span class="pill" id="annualGoalTotal">年間目標 ¥0</span>
             </div>
             <div class="goal-stack" id="goalStack"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Monthly Check</p>
+                <h3>月別チェック一覧</h3>
+              </div>
+              <span class="pill" id="statusOverviewMonth">-</span>
+            </div>
+            <div class="status-overview" id="statusOverview"></div>
           </section>
 
           <section class="split-grid">
@@ -1468,7 +1599,7 @@ tr.is-dragging td {
               <table>
                 <thead>
                   <tr>
-                    <th>完了</th>
+                    <th>状態</th>
                     <th>名称</th>
                     <th>カテゴリ</th>
                     <th>支払日</th>
@@ -1550,6 +1681,112 @@ tr.is-dragging td {
       </form>
     </dialog>
 
+    <dialog class="modal settings-modal" id="settingsDialog">
+      <div class="settings-form">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Settings</p>
+            <h3>設定</h3>
+          </div>
+          <button class="icon-button" type="button" id="closeSettingsDialog" aria-label="閉じる">×</button>
+        </div>
+
+        <div class="settings-sections">
+          <section class="settings-section" aria-label="アカウント設定">
+            <div class="section-heading">
+              <h4>アカウント設定</h4>
+              <span id="syncStatus">同期待ち</span>
+            </div>
+            <div class="account-meta">
+              <span>メールアドレス</span>
+              <strong id="accountEmail">-</strong>
+            </div>
+            <div class="account-meta">
+              <span>UID</span>
+              <code id="userUid">-</code>
+            </div>
+            <div class="account-meta">
+              <span>家計ID</span>
+              <code id="householdId">-</code>
+            </div>
+          </section>
+
+          <section class="settings-section" aria-label="パスワードリセット設定">
+            <div class="section-heading">
+              <h4>パスワードリセット設定</h4>
+            </div>
+            <button class="button secondary" id="passwordResetButton" type="button">
+              <span aria-hidden="true">↺</span>
+              <span>リセットメール送信</span>
+            </button>
+          </section>
+
+          <section class="settings-section" aria-label="家計切り替え">
+            <div class="section-heading">
+              <h4>家計切り替え</h4>
+            </div>
+            <div class="field-group">
+              <label for="switchHouseholdId">参加する家計ID</label>
+              <input id="switchHouseholdId" type="text" placeholder="共有された家計ID" />
+            </div>
+            <button class="button secondary" id="switchHouseholdButton" type="button">
+              <span aria-hidden="true">↔</span>
+              <span>家計を切替</span>
+            </button>
+          </section>
+
+          <section class="settings-section" aria-label="メンバー追加">
+            <div class="section-heading">
+              <h4>メンバー追加</h4>
+            </div>
+            <div class="field-group">
+              <label for="memberUid">追加するメンバーUID</label>
+              <input id="memberUid" type="text" placeholder="相手のUID" />
+            </div>
+            <button class="button secondary" id="addMemberButton" type="button">
+              <span aria-hidden="true">＋</span>
+              <span>メンバー追加</span>
+            </button>
+          </section>
+
+          <section class="settings-section" aria-label="CSVインポートとエクスポート">
+            <div class="section-heading">
+              <h4>CSVインポート/エクスポート</h4>
+            </div>
+            <div class="csv-grid">
+              <button class="button secondary" type="button" data-export-csv="payment">
+                <span aria-hidden="true">↓</span>
+                <span>支払いCSV出力</span>
+              </button>
+              <label class="button secondary file-button">
+                <span aria-hidden="true">↑</span>
+                <span>支払いCSV読込</span>
+                <input type="file" accept=".csv,text/csv" data-import-csv="payment" />
+              </label>
+              <button class="button secondary" type="button" data-export-csv="saving">
+                <span aria-hidden="true">↓</span>
+                <span>貯金CSV出力</span>
+              </button>
+              <label class="button secondary file-button">
+                <span aria-hidden="true">↑</span>
+                <span>貯金CSV読込</span>
+                <input type="file" accept=".csv,text/csv" data-import-csv="saving" />
+              </label>
+              <button class="button secondary" type="button" data-export-csv="nisa">
+                <span aria-hidden="true">↓</span>
+                <span>NISA CSV出力</span>
+              </button>
+              <label class="button secondary file-button">
+                <span aria-hidden="true">↑</span>
+                <span>NISA CSV読込</span>
+                <input type="file" accept=".csv,text/csv" data-import-csv="nisa" />
+              </label>
+            </div>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script type="module">
@@ -1559,6 +1796,7 @@ import {
   getMultiFactorResolver,
   multiFactor,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
@@ -1616,6 +1854,57 @@ const defaultSortModes = {
   payment: "manual",
   saving: "manual",
   nisa: "manual",
+};
+
+const csvSchemas = {
+  payment: {
+    label: "支払い",
+    filename: "支払い",
+    columns: [
+      ["id", "ID"],
+      ["name", "名称"],
+      ["amount", "金額"],
+      ["amountPending", "金額未確定"],
+      ["amountNote", "未確定メモ"],
+      ["dueDay", "支払日"],
+      ["category", "カテゴリ"],
+      ["memo", "メモ"],
+      ["active", "有効"],
+    ],
+  },
+  saving: {
+    label: "貯金",
+    filename: "貯金",
+    columns: [
+      ["id", "ID"],
+      ["type", "種類"],
+      ["name", "名称"],
+      ["monthlyContribution", "毎月の積立額"],
+      ["bonusMonth1", "ボーナス月1"],
+      ["bonusAmount1", "ボーナス月1の追加額"],
+      ["bonusMonth2", "ボーナス月2"],
+      ["bonusAmount2", "ボーナス月2の追加額"],
+      ["annualGoal", "年間目標額"],
+      ["currentAmount", "現在残高"],
+      ["memo", "メモ"],
+    ],
+  },
+  nisa: {
+    label: "つみたてNISA",
+    filename: "つみたてNISA",
+    columns: [
+      ["id", "ID"],
+      ["name", "銘柄・目的"],
+      ["monthlyContribution", "毎月の積立額"],
+      ["bonusMonth1", "ボーナス月1"],
+      ["bonusAmount1", "ボーナス月1の追加額"],
+      ["bonusMonth2", "ボーナス月2"],
+      ["bonusAmount2", "ボーナス月2の追加額"],
+      ["annualGoal", "年間目標額"],
+      ["currentValue", "評価額"],
+      ["memo", "メモ"],
+    ],
+  },
 };
 
 const sampleState = {
@@ -1754,7 +2043,14 @@ const elements = {
   switchHouseholdButton: document.querySelector("#switchHouseholdButton"),
   memberUid: document.querySelector("#memberUid"),
   addMemberButton: document.querySelector("#addMemberButton"),
+  passwordResetButton: document.querySelector("#passwordResetButton"),
   signOutButton: document.querySelector("#signOutButton"),
+  openSettingsButton: document.querySelector("#openSettingsButton"),
+  settingsDialog: document.querySelector("#settingsDialog"),
+  closeSettingsDialog: document.querySelector("#closeSettingsDialog"),
+  copyPreviousMonthButton: document.querySelector("#copyPreviousMonthButton"),
+  contextAddButton: document.querySelector("#contextAddButton"),
+  contextAddLabel: document.querySelector("#contextAddLabel"),
   monthLabel: document.querySelector("#monthLabel"),
   viewTitle: document.querySelector("#viewTitle"),
   paymentTotal: document.querySelector("#paymentTotal"),
@@ -1770,6 +2066,8 @@ const elements = {
   upcomingPayments: document.querySelector("#upcomingPayments"),
   allocationChart: document.querySelector("#allocationChart"),
   allocationLegend: document.querySelector("#allocationLegend"),
+  statusOverview: document.querySelector("#statusOverview"),
+  statusOverviewMonth: document.querySelector("#statusOverviewMonth"),
   paymentsTable: document.querySelector("#paymentsTable"),
   paymentsCount: document.querySelector("#paymentsCount"),
   paymentSortMode: document.querySelector("#paymentSortMode"),
@@ -2056,7 +2354,7 @@ function parseAmount(value) {
 }
 
 function normalizeBonusMonth(value) {
-  const month = Number(value) || 0;
+  const month = Number(String(value || "").replace("月", "")) || 0;
   return month >= 1 && month <= 12 ? month : 0;
 }
 
@@ -2065,14 +2363,28 @@ function monthNumberFromValue(value) {
   return month >= 1 && month <= 12 ? month : 0;
 }
 
+function previousMonthValue(value) {
+  const [year, month] = String(value || currentMonth).split("-").map(Number);
+  const date = new Date((year || today.getFullYear()), (month || today.getMonth() + 1) - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthValue(value) {
+  return monthFormatter.format(new Date(`${value}-01T00:00:00`));
+}
+
+function normalizeMonthlyStatus(status = {}) {
+  return {
+    payments: { ...(status.payments || {}) },
+    savings: { ...(status.savings || {}) },
+    nisa: { ...(status.nisa || {}) },
+  };
+}
+
 function selectedMonthStatus() {
   const month = state.profile.selectedMonth || currentMonth;
   const existing = state.monthlyStatus[month] || {};
-  state.monthlyStatus[month] = {
-    payments: existing.payments || {},
-    savings: existing.savings || {},
-    nisa: existing.nisa || {},
-  };
+  state.monthlyStatus[month] = normalizeMonthlyStatus(existing);
 
   return state.monthlyStatus[month];
 }
@@ -2204,6 +2516,7 @@ function render() {
   elements.monthLabel.textContent = monthFormatter.format(selectedDate);
   elements.viewTitle.textContent = getViewTitle();
 
+  renderTopbarActions();
   syncActiveView();
   syncNavTabs();
   renderSortControls();
@@ -2233,6 +2546,21 @@ function setAccountBasics(user) {
 
 function setSyncStatus(message) {
   elements.syncStatus.textContent = message;
+}
+
+function renderTopbarActions() {
+  const addLabels = {
+    payments: { kind: "payment", label: "支払い追加" },
+    savings: { kind: "saving", label: "貯金追加" },
+    nisa: { kind: "nisa", label: "NISA追加" },
+  };
+  const current = addLabels[activeTab];
+  if (!elements.contextAddButton || !elements.contextAddLabel) return;
+
+  elements.contextAddButton.classList.toggle("hidden", !current);
+  if (!current) return;
+  elements.contextAddButton.dataset.openForm = current.kind;
+  elements.contextAddLabel.textContent = current.label;
 }
 
 function getViewTitle() {
@@ -2291,6 +2619,7 @@ function renderDashboard() {
   renderAnnualGoals();
   renderUpcomingPayments(payments, status);
   renderAllocation(paymentTotal, savingTotal, nisaTotal);
+  renderMonthlyStatusOverview();
 }
 
 function renderAnnualGoals() {
@@ -2389,6 +2718,80 @@ function renderAllocation(paymentTotal, savingTotal, nisaTotal) {
     .join("");
 }
 
+function renderMonthlyStatusOverview() {
+  if (!elements.statusOverview || !elements.statusOverviewMonth) return;
+
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const status = selectedMonthStatus();
+  const groups = [
+    {
+      kind: "payment",
+      title: "支払い",
+      doneLabel: "完了済み",
+      pendingLabel: "未完了",
+      items: sortedItems("payment", activePayments()),
+      amountLabel: (item) => paymentAmountLabel(item),
+      metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・毎月${item.dueDay}日`,
+    },
+    {
+      kind: "saving",
+      title: "貯金",
+      doneLabel: "入金済み",
+      pendingLabel: "未入金",
+      items: sortedItems("saving", state.savings),
+      amountLabel: (item) => formatYen(scheduledContribution(item, selectedMonth)),
+      metaLabel: (item) => typeLabels[item.type] || "貯金",
+    },
+    {
+      kind: "nisa",
+      title: "つみたてNISA",
+      doneLabel: "実行済み",
+      pendingLabel: "未実行",
+      items: sortedItems("nisa", state.nisa),
+      amountLabel: (item) => formatYen(scheduledContribution(item, selectedMonth)),
+      metaLabel: () => "積立予定",
+    },
+  ];
+
+  elements.statusOverviewMonth.textContent = formatMonthValue(selectedMonth);
+  elements.statusOverview.innerHTML = groups
+    .map((group) => {
+      const key = statusKey(group.kind);
+      const doneCount = group.items.filter((item) => status[key]?.[item.id]).length;
+      const rows = group.items.length
+        ? group.items
+            .map((item) => {
+              const done = Boolean(status[key]?.[item.id]);
+              return `
+                <div class="status-row ${done ? "done" : "pending"}">
+                  <div class="status-row-main">
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>${escapeHtml(group.metaLabel(item))}</span>
+                  </div>
+                  <span class="status-row-amount">${escapeHtml(group.amountLabel(item))}</span>
+                  <button class="status-chip ${done ? "done" : "pending"}" type="button" data-toggle="${group.kind}" data-id="${item.id}">
+                    <span aria-hidden="true">${done ? "✓" : "!"}</span>
+                    <span>${done ? group.doneLabel : group.pendingLabel}</span>
+                  </button>
+                </div>
+              `;
+            })
+            .join("")
+        : `<div class="empty-state">${group.title}項目がありません。</div>`;
+
+      return `
+        <section class="status-group">
+          <div class="status-group-heading">
+            <h4>${group.title}</h4>
+            <span class="pill">${doneCount}/${group.items.length}</span>
+          </div>
+          <div class="status-list">${rows}</div>
+        </section>
+      `;
+    })
+    .join("");
+}
+
 function renderPayments() {
   const status = selectedMonthStatus();
   const payments = sortedItems("payment", activePayments());
@@ -2401,14 +2804,15 @@ function renderPayments() {
 
   elements.paymentsTable.innerHTML = payments
     .map(
-      (payment) => `
-        <tr data-reorder-item="payment" data-id="${payment.id}">
-          <td data-label="完了">
-            <div class="reorder-cell">
-              <label class="check-wrap" aria-label="${escapeHtml(payment.name)}を完了">
-                <input type="checkbox" data-status="payment" data-id="${payment.id}" ${status.payments[payment.id] ? "checked" : ""} />
-              </label>
-            </div>
+      (payment) => {
+        const done = Boolean(status.payments[payment.id]);
+        return `
+        <tr class="${done ? "is-complete" : ""}" data-reorder-item="payment" data-id="${payment.id}">
+          <td class="status-cell" data-label="状態">
+            <button class="status-chip ${done ? "done" : "pending"}" type="button" data-toggle="payment" data-id="${payment.id}">
+              <span aria-hidden="true">${done ? "✓" : "!"}</span>
+              <span>${done ? "完了済み" : "未完了"}</span>
+            </button>
           </td>
           <td data-label="名称"><strong>${escapeHtml(payment.name)}</strong></td>
           <td data-label="カテゴリ">${categoryLabels[payment.category] || "その他"}</td>
@@ -2425,7 +2829,8 @@ function renderPayments() {
             <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
           </td>
         </tr>
-      `,
+      `;
+      },
     )
     .join("");
 }
@@ -2449,8 +2854,9 @@ function renderSavings() {
       const thisMonthAmount = scheduledContribution(saving, selectedMonth);
       const bonusText = bonusPlanText(saving);
       const percent = saving.annualGoal > 0 ? Math.min(100, Math.round((yearly / saving.annualGoal) * 100)) : 0;
+      const done = Boolean(status.savings[saving.id]);
       return `
-        <article class="bucket-card" data-reorder-item="saving" data-id="${saving.id}">
+        <article class="bucket-card ${done ? "is-complete" : ""}" data-reorder-item="saving" data-id="${saving.id}">
           <div class="bucket-top">
             <div class="bucket-title-row">
               <strong>${escapeHtml(saving.name)}</strong>
@@ -2476,8 +2882,9 @@ function renderSavings() {
           </div>
           <p class="bucket-note">${escapeHtml(saving.memo || "")}</p>
           <div class="card-actions">
-            <button class="small-button" type="button" data-toggle="saving" data-id="${saving.id}">
-              ${status.savings[saving.id] ? "今月入金済み" : "今月入金"}
+            <button class="status-chip ${done ? "done" : "pending"}" type="button" data-toggle="saving" data-id="${saving.id}">
+              <span aria-hidden="true">${done ? "✓" : "!"}</span>
+              <span>${done ? "入金済み" : "未入金"}</span>
             </button>
             <button class="small-button" type="button" data-edit="saving" data-id="${saving.id}">編集</button>
             <button class="small-button danger" type="button" data-delete="saving" data-id="${saving.id}">削除</button>
@@ -2507,8 +2914,9 @@ function renderNisa() {
       const thisMonthAmount = scheduledContribution(item, selectedMonth);
       const bonusText = bonusPlanText(item);
       const percent = item.annualGoal > 0 ? Math.min(100, Math.round((yearly / item.annualGoal) * 100)) : 0;
+      const done = Boolean(status.nisa[item.id]);
       return `
-        <article class="bucket-card" data-reorder-item="nisa" data-id="${item.id}">
+        <article class="bucket-card ${done ? "is-complete" : ""}" data-reorder-item="nisa" data-id="${item.id}">
           <div class="bucket-top">
             <div class="bucket-title-row">
               <strong>${escapeHtml(item.name)}</strong>
@@ -2534,8 +2942,9 @@ function renderNisa() {
           </div>
           <p class="bucket-note">${escapeHtml(item.memo || "")}</p>
           <div class="card-actions">
-            <button class="small-button" type="button" data-toggle="nisa" data-id="${item.id}">
-              ${status.nisa[item.id] ? "今月実行済み" : "今月実行"}
+            <button class="status-chip ${done ? "done" : "pending"}" type="button" data-toggle="nisa" data-id="${item.id}">
+              <span aria-hidden="true">${done ? "✓" : "!"}</span>
+              <span>${done ? "実行済み" : "未実行"}</span>
             </button>
             <button class="small-button" type="button" data-edit="nisa" data-id="${item.id}">編集</button>
             <button class="small-button danger" type="button" data-delete="nisa" data-id="${item.id}">削除</button>
@@ -2608,11 +3017,12 @@ function formFields(kind, item) {
         </label>
         <span>請求額がまだ分からない場合に使います。見込み額を入れるか、0のまま保存できます。</span>
       </div>
-      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1", false)}
-      ${numberField("dueDay", "支払日", item?.dueDay || 1, "1")}
+      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1", false, "例: 1234")}
+      ${numberField("dueDay", "支払日", item?.dueDay || "", "1", true, "例: 27")}
       <div class="field-group">
         <label for="category">カテゴリ</label>
-        <select id="category" name="category">
+        <select id="category" name="category" required>
+          <option value="" ${item?.category ? "" : "selected"}>選択してください</option>
           ${Object.entries(categoryLabels)
             .map(([value, label]) => `<option value="${value}" ${item?.category === value ? "selected" : ""}>${label}</option>`)
             .join("")}
@@ -2688,11 +3098,11 @@ function textField(name, label, value, placeholder, required = true) {
   `;
 }
 
-function numberField(name, label, value, step, required = true) {
+function numberField(name, label, value, step, required = true, placeholder = "") {
   return `
     <div class="field-group">
       <label for="${name}">${label}</label>
-      <input id="${name}" name="${name}" type="number" min="0" step="${step}" inputmode="numeric" value="${escapeAttribute(value)}" ${required ? "required" : ""} />
+      <input id="${name}" name="${name}" type="number" min="0" step="${step}" inputmode="numeric" value="${escapeAttribute(value)}" ${placeholder ? `placeholder="${escapeAttribute(placeholder)}"` : ""} ${required ? "required" : ""} />
     </div>
   `;
 }
@@ -2735,7 +3145,7 @@ function buildItem(kind, formData, current) {
       amountPending,
       amountNote: amountPending ? formData.get("amountNote").trim() : "",
       dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
-      category: formData.get("category"),
+      category: formData.get("category") || "other",
       memo: formData.get("memo").trim(),
       active: current?.active ?? true,
       createdAt: current?.createdAt || timestamp,
@@ -3073,6 +3483,26 @@ function toggleStatus(kind, id, checked = null) {
   render();
 }
 
+function copyPreviousMonthStatus() {
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const previousMonth = previousMonthValue(selectedMonth);
+  const previousStatus = state.monthlyStatus[previousMonth];
+
+  if (!previousStatus) {
+    showToast(`${formatMonthValue(previousMonth)}の完了データがありません。`);
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `${formatMonthValue(previousMonth)}の完了状態を${formatMonthValue(selectedMonth)}へコピーしますか？`,
+  );
+  if (!confirmed) return;
+
+  state.monthlyStatus[selectedMonth] = normalizeMonthlyStatus(previousStatus);
+  showToast("前月の完了状態をコピーしました。");
+  render();
+}
+
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".view").forEach((view) => {
@@ -3087,40 +3517,223 @@ function handleSortModeChange(kind, mode) {
   render();
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `支払いと貯金ノート-${state.profile.selectedMonth}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
-  showToast("JSONを書き出しました。");
+function exportCsv(kind) {
+  const schema = csvSchemas[kind];
+  if (!schema) return;
+
+  const rows = [
+    schema.columns.map(([, label]) => label),
+    ...getCollection(kind).map((item) => schema.columns.map(([key]) => csvCellValue(item[key]))),
+  ];
+  const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+  downloadTextFile(`支払いと貯金ノート-${schema.filename}-${state.profile.selectedMonth || currentMonth}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+  showToast(`${schema.label}CSVを書き出しました。`);
 }
 
-function importData(file) {
-  if (!file) return;
+function importCsv(kind, file) {
+  const schema = csvSchemas[kind];
+  if (!schema || !file) return;
 
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     try {
-      const imported = JSON.parse(reader.result);
-      state = normalizeState(imported);
-      showToast("データを読み込みました。");
+      const items = csvToItems(kind, reader.result);
+      if (!items.length) {
+        showToast("CSVに読み込める項目がありません。");
+        return;
+      }
+
+      const confirmed = window.confirm(`${schema.label}をCSVの${items.length}件で置き換えますか？`);
+      if (!confirmed) return;
+
+      const collection = getCollection(kind);
+      collection.splice(0, collection.length, ...items);
+      pruneMonthlyStatuses(kind);
+      setSortMode(kind, "manual");
+      showToast(`${schema.label}CSVを読み込みました。`);
       render();
-    } catch {
-      showToast("読み込みに失敗しました。");
+    } catch (error) {
+      console.error(error);
+      showToast("CSV読み込みに失敗しました。");
     }
   });
   reader.readAsText(file);
 }
 
-function resetData() {
-  const confirmed = window.confirm("サンプル状態に戻しますか？現在の保存データは上書きされます。");
-  if (!confirmed) return;
-  state = normalizeState(sampleState);
-  showToast("初期状態に戻しました。");
-  render();
+function csvCellValue(value) {
+  if (typeof value === "boolean") return value ? "1" : "0";
+  return value ?? "";
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvToItems(kind, text) {
+  const schema = csvSchemas[kind];
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => String(cell).trim()));
+  if (rows.length < 2) return [];
+
+  const headerMap = new Map();
+  schema.columns.forEach(([key, label]) => {
+    headerMap.set(normalizeCsvHeader(key), key);
+    headerMap.set(normalizeCsvHeader(label), key);
+  });
+
+  const keys = rows[0].map((header) => headerMap.get(normalizeCsvHeader(header)));
+  return rows
+    .slice(1)
+    .map((row) => {
+      const data = {};
+      keys.forEach((key, index) => {
+        if (key) data[key] = row[index] ?? "";
+      });
+      return buildCsvItem(kind, data);
+    })
+    .filter((item) => item.name);
+}
+
+function parseCsvRows(text) {
+  const source = String(text || "").replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+
+    if (inQuotes) {
+      if (char === '"' && next === '"') {
+        field += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        field += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (char !== "\r") {
+      field += char;
+    }
+  }
+
+  if (field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function normalizeCsvHeader(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function buildCsvItem(kind, data) {
+  const timestamp = Date.now();
+  const id = String(data.id || "").trim() || createId();
+
+  if (kind === "payment") {
+    return {
+      id,
+      name: String(data.name || "").trim(),
+      amount: parseAmount(data.amount),
+      amountPending: parseCsvBoolean(data.amountPending),
+      amountNote: String(data.amountNote || "").trim(),
+      dueDay: Math.min(31, Math.max(1, Number(data.dueDay) || 1)),
+      category: normalizePaymentCategory(data.category),
+      memo: String(data.memo || "").trim(),
+      active: parseCsvBoolean(data.active, true),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+  }
+
+  if (kind === "saving") {
+    return {
+      id,
+      type: normalizeSavingType(data.type),
+      name: String(data.name || "").trim(),
+      monthlyContribution: parseAmount(data.monthlyContribution),
+      bonusMonth1: normalizeBonusMonth(data.bonusMonth1),
+      bonusAmount1: parseAmount(data.bonusAmount1),
+      bonusMonth2: normalizeBonusMonth(data.bonusMonth2),
+      bonusAmount2: parseAmount(data.bonusAmount2),
+      annualGoal: parseAmount(data.annualGoal),
+      currentAmount: parseAmount(data.currentAmount),
+      memo: String(data.memo || "").trim(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+  }
+
+  return {
+    id,
+    name: String(data.name || "").trim(),
+    monthlyContribution: parseAmount(data.monthlyContribution),
+    bonusMonth1: normalizeBonusMonth(data.bonusMonth1),
+    bonusAmount1: parseAmount(data.bonusAmount1),
+    bonusMonth2: normalizeBonusMonth(data.bonusMonth2),
+    bonusAmount2: parseAmount(data.bonusAmount2),
+    annualGoal: parseAmount(data.annualGoal),
+    currentValue: parseAmount(data.currentValue),
+    memo: String(data.memo || "").trim(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function parseCsvBoolean(value, defaultValue = false) {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (!text) return defaultValue;
+  return ["1", "true", "yes", "y", "on", "はい", "有効", "完了", "済"].includes(text);
+}
+
+function normalizePaymentCategory(value) {
+  const text = String(value || "").trim();
+  if (categoryLabels[text]) return text;
+  return Object.entries(categoryLabels).find(([, label]) => label === text)?.[0] || "other";
+}
+
+function normalizeSavingType(value) {
+  const text = String(value || "").trim();
+  if (typeLabels[text]) return text;
+  return Object.entries(typeLabels).find(([, label]) => label === text)?.[0] || "personal";
+}
+
+function pruneMonthlyStatuses(kind) {
+  const key = statusKey(kind);
+  const ids = new Set(getCollection(kind).map((item) => item.id));
+  Object.values(state.monthlyStatus).forEach((monthStatus) => {
+    Object.keys(monthStatus[key] || {}).forEach((id) => {
+      if (!ids.has(id)) delete monthStatus[key][id];
+    });
+  });
 }
 
 async function handleSignIn(event) {
@@ -3272,8 +3885,26 @@ async function handleAddMember() {
   }
 }
 
+async function handlePasswordReset() {
+  if (!currentUser?.email) {
+    showToast("メールアドレスを確認できません。");
+    return;
+  }
+
+  const confirmed = window.confirm(`${currentUser.email} にパスワードリセットメールを送信しますか？`);
+  if (!confirmed) return;
+
+  try {
+    await sendPasswordResetEmail(auth, currentUser.email);
+    showToast("パスワードリセットメールを送信しました。");
+  } catch (error) {
+    showToast(firebaseErrorMessage(error));
+  }
+}
+
 async function handleSignOut() {
   cleanupHouseholdSubscription();
+  elements.settingsDialog?.close();
   await signOut(auth);
 }
 
@@ -3380,7 +4011,11 @@ elements.sendVerificationButton.addEventListener("click", resendVerificationEmai
 elements.emailVerifySignOutButton.addEventListener("click", handleSignOut);
 elements.switchHouseholdButton.addEventListener("click", handleSwitchHousehold);
 elements.addMemberButton.addEventListener("click", handleAddMember);
+elements.passwordResetButton.addEventListener("click", handlePasswordReset);
 elements.signOutButton.addEventListener("click", handleSignOut);
+elements.openSettingsButton.addEventListener("click", () => elements.settingsDialog.showModal());
+elements.closeSettingsDialog.addEventListener("click", () => elements.settingsDialog.close());
+elements.copyPreviousMonthButton.addEventListener("click", copyPreviousMonthStatus);
 
 elements.selectedMonth.addEventListener("change", (event) => {
   state.profile.selectedMonth = event.target.value || currentMonth;
@@ -3445,14 +4080,22 @@ document.addEventListener("change", (event) => {
 elements.itemForm.addEventListener("submit", handleFormSubmit);
 document.querySelector("#closeDialog").addEventListener("click", () => elements.itemDialog.close());
 document.querySelector("#cancelForm").addEventListener("click", () => elements.itemDialog.close());
-document.querySelector("#exportButton").addEventListener("click", exportData);
-document.querySelector("#importFile").addEventListener("change", (event) => importData(event.target.files[0]));
-document.querySelector("#resetButton").addEventListener("click", resetData);
+document.querySelectorAll("[data-export-csv]").forEach((button) => {
+  button.addEventListener("click", () => exportCsv(button.dataset.exportCsv));
+});
+document.querySelectorAll("[data-import-csv]").forEach((input) => {
+  input.addEventListener("change", (event) => {
+    importCsv(input.dataset.importCsv, event.target.files[0]);
+    event.target.value = "";
+  });
+});
 
 initializeFirebase();
 
 </script>
   </body>
 </html>
+
+
 
 
