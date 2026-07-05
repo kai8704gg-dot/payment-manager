@@ -211,6 +211,13 @@ code {
   gap: 8px;
 }
 
+.nav-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .nav-tab {
   display: flex;
   align-items: center;
@@ -237,6 +244,68 @@ code {
   border-color: #cfe1dc;
   background: #eef7f4;
   color: var(--ink);
+}
+
+.nav-drag {
+  width: 34px;
+  height: 44px;
+}
+
+.nav-delete {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.nav-delete:hover {
+  border-color: #f0b7c5;
+  background: #fff0f4;
+  color: var(--rose);
+}
+
+.nav-tools,
+.panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nav-tools {
+  justify-content: stretch;
+}
+
+.nav-tools .button {
+  min-height: 40px;
+}
+
+.sort-field {
+  display: inline-grid;
+  min-width: 150px;
+  gap: 4px;
+}
+
+.sort-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.sort-field select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 7px 10px;
+  font-weight: 800;
 }
 
 .settings-panel {
@@ -667,6 +736,11 @@ td {
   color: var(--teal-dark);
 }
 
+.drag-handle.nav-drag {
+  width: 34px;
+  height: 44px;
+}
+
 body.is-reordering {
   user-select: none;
 }
@@ -946,24 +1020,17 @@ tr.is-dragging td {
 
   .sidebar {
     position: static;
-    gap: 18px;
+    gap: 14px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
 
   .nav-tabs {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .nav-tab {
-    justify-content: center;
-    min-height: 54px;
-    padding: 8px;
-    text-align: center;
-  }
-
-  .nav-tab span:last-child {
-    display: none;
+    min-height: 48px;
   }
 
   .settings-panel {
@@ -1029,8 +1096,78 @@ tr.is-dragging td {
     flex-direction: column;
   }
 
+  .nav-tabs,
+  .nav-tools,
+  .panel-tools {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .nav-item,
+  .panel-tools {
+    width: 100%;
+  }
+
+  .sort-field {
+    width: 100%;
+  }
+
   .pill {
     white-space: normal;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  table {
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  tr[data-reorder-item="payment"] {
+    display: grid;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+    padding: 12px;
+  }
+
+  tr[data-reorder-item="payment"] td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 0;
+    padding: 7px 0;
+    text-align: right;
+  }
+
+  tr[data-reorder-item="payment"] td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+    text-align: left;
+  }
+
+  tr[data-reorder-item="payment"] td:first-child,
+  tr[data-reorder-item="payment"] .action-cell {
+    justify-content: flex-end;
+  }
+
+  tr[data-reorder-item="payment"] td:first-child::before,
+  tr[data-reorder-item="payment"] .action-cell::before {
+    content: "";
   }
 }
 
@@ -1133,24 +1270,22 @@ tr.is-dragging td {
           </div>
         </div>
 
-        <nav class="nav-tabs" aria-label="表示切り替え">
-          <button class="nav-tab active" type="button" data-tab="dashboard">
-            <span aria-hidden="true">▦</span>
-            <span>ダッシュボード</span>
+        <nav class="nav-tabs" id="navTabs" aria-label="表示切り替え"></nav>
+
+        <div class="nav-tools">
+          <label class="sort-field">
+            <span>メニュー並び</span>
+            <select id="navSortMode">
+              <option value="manual">手動順</option>
+              <option value="name">名前順</option>
+              <option value="updated">更新日順</option>
+            </select>
+          </label>
+          <button class="button secondary" id="addNavItemButton" type="button">
+            <span aria-hidden="true">＋</span>
+            <span>メニュー</span>
           </button>
-          <button class="nav-tab" type="button" data-tab="payments">
-            <span aria-hidden="true">□</span>
-            <span>支払い</span>
-          </button>
-          <button class="nav-tab" type="button" data-tab="savings">
-            <span aria-hidden="true">◇</span>
-            <span>貯金</span>
-          </button>
-          <button class="nav-tab" type="button" data-tab="nisa">
-            <span aria-hidden="true">△</span>
-            <span>つみたてNISA</span>
-          </button>
-        </nav>
+        </div>
 
         <section class="settings-panel" aria-label="基本設定">
           <div class="field-group">
@@ -1305,13 +1440,25 @@ tr.is-dragging td {
                 <p class="eyebrow">Recurring Payments</p>
                 <h3>毎月の支払い</h3>
               </div>
-              <span class="pill" id="paymentsCount">0件</span>
+              <div class="panel-tools">
+                <label class="sort-field">
+                  <span>並び順</span>
+                  <select id="paymentSortMode">
+                    <option value="manual">手動順</option>
+                    <option value="name">名前順</option>
+                    <option value="updated">更新日順</option>
+                    <option value="date">支払日順</option>
+                    <option value="amount">金額順</option>
+                  </select>
+                </label>
+                <span class="pill" id="paymentsCount">0件</span>
+              </div>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>完了</th>
+                    <th>並替 / 完了</th>
                     <th>名称</th>
                     <th>カテゴリ</th>
                     <th>支払日</th>
@@ -1333,7 +1480,18 @@ tr.is-dragging td {
                 <p class="eyebrow">Savings Buckets</p>
                 <h3>貯金の管理</h3>
               </div>
-              <span class="pill" id="savingsCount">0件</span>
+              <div class="panel-tools">
+                <label class="sort-field">
+                  <span>並び順</span>
+                  <select id="savingSortMode">
+                    <option value="manual">手動順</option>
+                    <option value="name">名前順</option>
+                    <option value="updated">更新日順</option>
+                    <option value="amount">金額順</option>
+                  </select>
+                </label>
+                <span class="pill" id="savingsCount">0件</span>
+              </div>
             </div>
             <div class="bucket-grid" id="savingsGrid"></div>
           </section>
@@ -1346,9 +1504,32 @@ tr.is-dragging td {
                 <p class="eyebrow">Investment Plan</p>
                 <h3>つみたてNISA</h3>
               </div>
-              <span class="pill" id="nisaCount">0件</span>
+              <div class="panel-tools">
+                <label class="sort-field">
+                  <span>並び順</span>
+                  <select id="nisaSortMode">
+                    <option value="manual">手動順</option>
+                    <option value="name">名前順</option>
+                    <option value="updated">更新日順</option>
+                    <option value="amount">金額順</option>
+                  </select>
+                </label>
+                <span class="pill" id="nisaCount">0件</span>
+              </div>
             </div>
             <div class="bucket-grid" id="nisaGrid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="customView" data-view="custom" aria-label="追加メニュー">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Custom Menu</p>
+                <h3 id="customTitle">追加メニュー</h3>
+              </div>
+            </div>
+            <div class="empty-state" id="customDescription">左メニューの「＋ メニュー」で項目を追加できます。</div>
           </section>
         </section>
       </main>
@@ -1431,12 +1612,29 @@ const monthFormatter = new Intl.DateTimeFormat("ja-JP", {
 
 const today = new Date();
 const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+const initialTimestamp = Date.now();
+
+const defaultSortModes = {
+  payment: "manual",
+  saving: "manual",
+  nisa: "manual",
+  nav: "manual",
+};
+
+const builtinNavItems = [
+  { id: "dashboard", label: "ダッシュボード", icon: "▦", builtIn: true, updatedAt: initialTimestamp - 4 },
+  { id: "payments", label: "支払い", icon: "□", builtIn: true, updatedAt: initialTimestamp - 3 },
+  { id: "savings", label: "貯金", icon: "◇", builtIn: true, updatedAt: initialTimestamp - 2 },
+  { id: "nisa", label: "つみたてNISA", icon: "△", builtIn: true, updatedAt: initialTimestamp - 1 },
+];
 
 const sampleState = {
   profile: {
     selectedMonth: currentMonth,
     targetYear: today.getFullYear(),
     monthlyIncome: 360000,
+    sortModes: { ...defaultSortModes },
+    navItems: builtinNavItems.map((item) => ({ ...item })),
   },
   payments: [
     {
@@ -1567,6 +1765,9 @@ const elements = {
   memberUid: document.querySelector("#memberUid"),
   addMemberButton: document.querySelector("#addMemberButton"),
   signOutButton: document.querySelector("#signOutButton"),
+  navTabs: document.querySelector("#navTabs"),
+  navSortMode: document.querySelector("#navSortMode"),
+  addNavItemButton: document.querySelector("#addNavItemButton"),
   monthLabel: document.querySelector("#monthLabel"),
   viewTitle: document.querySelector("#viewTitle"),
   paymentTotal: document.querySelector("#paymentTotal"),
@@ -1584,10 +1785,15 @@ const elements = {
   allocationLegend: document.querySelector("#allocationLegend"),
   paymentsTable: document.querySelector("#paymentsTable"),
   paymentsCount: document.querySelector("#paymentsCount"),
+  paymentSortMode: document.querySelector("#paymentSortMode"),
   savingsGrid: document.querySelector("#savingsGrid"),
   savingsCount: document.querySelector("#savingsCount"),
+  savingSortMode: document.querySelector("#savingSortMode"),
   nisaGrid: document.querySelector("#nisaGrid"),
   nisaCount: document.querySelector("#nisaCount"),
+  nisaSortMode: document.querySelector("#nisaSortMode"),
+  customTitle: document.querySelector("#customTitle"),
+  customDescription: document.querySelector("#customDescription"),
   itemDialog: document.querySelector("#itemDialog"),
   itemForm: document.querySelector("#itemForm"),
   formKicker: document.querySelector("#formKicker"),
@@ -1788,6 +1994,11 @@ function normalizeState(input) {
     profile: {
       ...base.profile,
       ...(input?.profile || {}),
+      sortModes: {
+        ...defaultSortModes,
+        ...(input?.profile?.sortModes || {}),
+      },
+      navItems: normalizeNavItems(input?.profile?.navItems || base.profile.navItems),
     },
     payments: Array.isArray(input?.payments) ? input.payments : base.payments,
     savings: Array.isArray(input?.savings) ? input.savings : base.savings,
@@ -1801,6 +2012,8 @@ function normalizeState(input) {
     active: payment.active !== false,
     amountPending: Boolean(payment.amountPending),
     amountNote: payment.amountNote || "",
+    createdAt: Number(payment.createdAt) || Number(payment.updatedAt) || initialTimestamp,
+    updatedAt: Number(payment.updatedAt) || Number(payment.createdAt) || initialTimestamp,
   }));
   next.savings = next.savings.map((saving) => ({
     id: saving.id || createId(),
@@ -1810,6 +2023,8 @@ function normalizeState(input) {
     bonusAmount1: parseAmount(saving.bonusAmount1),
     bonusMonth2: normalizeBonusMonth(saving.bonusMonth2),
     bonusAmount2: parseAmount(saving.bonusAmount2),
+    createdAt: Number(saving.createdAt) || Number(saving.updatedAt) || initialTimestamp,
+    updatedAt: Number(saving.updatedAt) || Number(saving.createdAt) || initialTimestamp,
   }));
   next.nisa = next.nisa.map((item) => ({
     id: item.id || createId(),
@@ -1818,6 +2033,8 @@ function normalizeState(input) {
     bonusAmount1: parseAmount(item.bonusAmount1),
     bonusMonth2: normalizeBonusMonth(item.bonusMonth2),
     bonusAmount2: parseAmount(item.bonusAmount2),
+    createdAt: Number(item.createdAt) || Number(item.updatedAt) || initialTimestamp,
+    updatedAt: Number(item.updatedAt) || Number(item.createdAt) || initialTimestamp,
   }));
 
   return next;
@@ -1827,6 +2044,35 @@ function cloneState(value) {
   return typeof structuredClone === "function"
     ? structuredClone(value)
     : JSON.parse(JSON.stringify(value));
+}
+
+function normalizeNavItems(items) {
+  const inputItems = Array.isArray(items) ? items : [];
+  const defaultById = new Map(builtinNavItems.map((item) => [item.id, item]));
+  const seen = new Set();
+  const normalized = inputItems
+    .map((item) => {
+      const defaultItem = defaultById.get(item?.id);
+      const id = defaultItem?.id || item?.id || createId();
+      seen.add(id);
+      return {
+        id,
+        label: String(item?.label || defaultItem?.label || "追加メニュー").trim() || "追加メニュー",
+        icon: String(item?.icon || defaultItem?.icon || "•").slice(0, 2),
+        builtIn: Boolean(defaultItem || item?.builtIn),
+        createdAt: Number(item?.createdAt) || Number(item?.updatedAt) || initialTimestamp,
+        updatedAt: Number(item?.updatedAt) || Number(item?.createdAt) || initialTimestamp,
+      };
+    })
+    .filter((item) => item.label);
+
+  builtinNavItems.forEach((item) => {
+    if (!seen.has(item.id)) {
+      normalized.push({ ...item });
+    }
+  });
+
+  return normalized;
 }
 
 function saveState() {
@@ -1903,6 +2149,53 @@ function savingsByType(type) {
   return state.savings.filter((saving) => saving.type === type);
 }
 
+function getSortMode(kind) {
+  return state.profile.sortModes?.[kind] || "manual";
+}
+
+function setSortMode(kind, mode) {
+  state.profile.sortModes = {
+    ...defaultSortModes,
+    ...(state.profile.sortModes || {}),
+    [kind]: mode || "manual",
+  };
+}
+
+function sortedItems(kind, items) {
+  const mode = getSortMode(kind);
+  const list = [...items];
+  if (mode === "manual") return list;
+
+  if (mode === "name") {
+    return list.sort((a, b) => compareText(a.label || a.name, b.label || b.name));
+  }
+
+  if (mode === "updated") {
+    return list.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+  }
+
+  if (mode === "amount") {
+    return list.sort((a, b) => sortAmountValue(kind, b) - sortAmountValue(kind, a));
+  }
+
+  if (mode === "date") {
+    return list.sort((a, b) => (Number(a.dueDay) || 0) - (Number(b.dueDay) || 0));
+  }
+
+  return list;
+}
+
+function compareText(a, b) {
+  return String(a || "").localeCompare(String(b || ""), "ja");
+}
+
+function sortAmountValue(kind, item) {
+  if (kind === "payment") return paymentAmountValue(item);
+  if (kind === "saving") return scheduledContribution(item, state.profile.selectedMonth || currentMonth);
+  if (kind === "nisa") return scheduledContribution(item, state.profile.selectedMonth || currentMonth);
+  return 0;
+}
+
 function bonusEntries(item) {
   return [
     { month: normalizeBonusMonth(item.bonusMonth1), amount: parseAmount(item.bonusAmount1) },
@@ -1939,6 +2232,10 @@ function paidYearTotal(collectionName, itemId, amountKey, year) {
 }
 
 function render() {
+  if (!state.profile.navItems.some((item) => item.id === activeTab)) {
+    activeTab = "dashboard";
+  }
+
   const selectedDate = new Date(`${state.profile.selectedMonth || currentMonth}-01T00:00:00`);
   elements.selectedMonth.value = state.profile.selectedMonth || currentMonth;
   elements.targetYear.value = state.profile.targetYear || today.getFullYear();
@@ -1946,11 +2243,15 @@ function render() {
   elements.monthLabel.textContent = monthFormatter.format(selectedDate);
   elements.viewTitle.textContent = getViewTitle();
 
+  syncActiveView();
+  renderNavTabs();
+  renderSortControls();
   renderAccountPanel();
   renderDashboard();
   renderPayments();
   renderSavings();
   renderNisa();
+  renderCustomView();
   saveState();
 }
 
@@ -1975,6 +2276,9 @@ function setSyncStatus(message) {
 }
 
 function getViewTitle() {
+  const customItem = getActiveCustomNavItem();
+  if (customItem) return customItem.label;
+
   const titles = {
     dashboard: "今月の資金計画",
     payments: "毎月の支払い",
@@ -1984,9 +2288,72 @@ function getViewTitle() {
   return titles[activeTab];
 }
 
+function renderNavTabs() {
+  if (!elements.navTabs) return;
+
+  const navItems = sortedItems("nav", state.profile.navItems);
+  const validActiveTab = navItems.some((item) => item.id === activeTab);
+  if (!validActiveTab) {
+    activeTab = "dashboard";
+  }
+
+  elements.navTabs.innerHTML = navItems
+    .map(
+      (item) => `
+        <div class="nav-item" data-reorder-item="nav" data-id="${item.id}">
+          <button class="drag-handle nav-drag" type="button" data-reorder-handle data-reorder-kind="nav" aria-label="${escapeAttribute(item.label)}を並び替え">
+            <span aria-hidden="true">↕</span>
+          </button>
+          <button class="nav-tab ${activeTab === item.id ? "active" : ""}" type="button" data-tab="${item.id}">
+            <span aria-hidden="true">${escapeHtml(item.icon || "•")}</span>
+            <span>${escapeHtml(item.label)}</span>
+          </button>
+          ${item.builtIn ? "" : `<button class="nav-delete" type="button" data-delete-nav="${item.id}" aria-label="${escapeAttribute(item.label)}を削除">×</button>`}
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSortControls() {
+  if (elements.paymentSortMode) elements.paymentSortMode.value = getSortMode("payment");
+  if (elements.savingSortMode) elements.savingSortMode.value = getSortMode("saving");
+  if (elements.nisaSortMode) elements.nisaSortMode.value = getSortMode("nisa");
+  if (elements.navSortMode) elements.navSortMode.value = getSortMode("nav");
+}
+
+function renderCustomView() {
+  const customItem = getActiveCustomNavItem();
+  if (!elements.customTitle || !elements.customDescription) return;
+
+  elements.customTitle.textContent = customItem?.label || "追加メニュー";
+  elements.customDescription.textContent = customItem
+    ? "追加したメニューです。左メニュー上で並び替えできます。"
+    : "左メニューの「＋ メニュー」で項目を追加できます。";
+}
+
+function syncActiveView() {
+  const viewName = viewNameForTab(activeTab);
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("active", view.dataset.view === viewName);
+  });
+}
+
+function getActiveCustomNavItem() {
+  return state.profile.navItems.find((item) => item.id === activeTab && !item.builtIn) || null;
+}
+
+function isCustomTab(tab) {
+  return state.profile.navItems.some((item) => item.id === tab && !item.builtIn);
+}
+
+function viewNameForTab(tab) {
+  return isCustomTab(tab) ? "custom" : tab;
+}
+
 function renderDashboard() {
   const status = selectedMonthStatus();
-  const payments = activePayments();
+  const payments = sortedItems("payment", activePayments());
   const selectedMonth = state.profile.selectedMonth || currentMonth;
   const paymentTotal = sum(payments, (payment) => paymentAmountValue(payment));
   const savingTotal = sum(state.savings, (saving) => scheduledContribution(saving, selectedMonth));
@@ -2112,7 +2479,7 @@ function renderAllocation(paymentTotal, savingTotal, nisaTotal) {
 
 function renderPayments() {
   const status = selectedMonthStatus();
-  const payments = activePayments();
+  const payments = sortedItems("payment", activePayments());
   elements.paymentsCount.textContent = `${payments.length}件`;
 
   if (!payments.length) {
@@ -2124,7 +2491,7 @@ function renderPayments() {
     .map(
       (payment) => `
         <tr data-reorder-item="payment" data-id="${payment.id}">
-          <td>
+          <td data-label="並替 / 完了">
             <div class="reorder-cell">
               <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="payment" aria-label="${escapeAttribute(payment.name)}を並び替え">
                 <span aria-hidden="true">↕</span>
@@ -2134,17 +2501,17 @@ function renderPayments() {
               </label>
             </div>
           </td>
-          <td><strong>${escapeHtml(payment.name)}</strong></td>
-          <td>${categoryLabels[payment.category] || "その他"}</td>
-          <td>毎月${payment.dueDay}日</td>
-          <td class="amount-cell">
+          <td data-label="名称"><strong>${escapeHtml(payment.name)}</strong></td>
+          <td data-label="カテゴリ">${categoryLabels[payment.category] || "その他"}</td>
+          <td data-label="支払日">毎月${payment.dueDay}日</td>
+          <td class="amount-cell" data-label="金額">
             <div class="amount-stack">
               <strong>${paymentAmountLabel(payment)}</strong>
               ${paymentAmountNote(payment) ? `<span>${escapeHtml(paymentAmountNote(payment))}</span>` : ""}
             </div>
           </td>
-          <td>${escapeHtml(payment.memo || "")}</td>
-          <td class="action-cell">
+          <td data-label="メモ">${escapeHtml(payment.memo || "")}</td>
+          <td class="action-cell" data-label="">
             <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
             <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
           </td>
@@ -2156,6 +2523,7 @@ function renderPayments() {
 
 function renderSavings() {
   const status = selectedMonthStatus();
+  const savings = sortedItems("saving", state.savings);
   elements.savingsCount.textContent = `${state.savings.length}件`;
 
   if (!state.savings.length) {
@@ -2163,7 +2531,7 @@ function renderSavings() {
     return;
   }
 
-  elements.savingsGrid.innerHTML = state.savings
+  elements.savingsGrid.innerHTML = savings
     .map((saving) => {
       const yearly = paidYearTotal("savings", saving.id, "monthlyContribution", state.profile.targetYear);
       const selectedMonth = state.profile.selectedMonth || currentMonth;
@@ -2216,6 +2584,7 @@ function renderSavings() {
 
 function renderNisa() {
   const status = selectedMonthStatus();
+  const nisaItems = sortedItems("nisa", state.nisa);
   elements.nisaCount.textContent = `${state.nisa.length}件`;
 
   if (!state.nisa.length) {
@@ -2223,7 +2592,7 @@ function renderNisa() {
     return;
   }
 
-  elements.nisaGrid.innerHTML = state.nisa
+  elements.nisaGrid.innerHTML = nisaItems
     .map((item) => {
       const yearly = paidYearTotal("nisa", item.id, "monthlyContribution", state.profile.targetYear);
       const selectedMonth = state.profile.selectedMonth || currentMonth;
@@ -2454,6 +2823,7 @@ function handleFormSubmit(event) {
 }
 
 function buildItem(kind, formData, current) {
+  const timestamp = Date.now();
   if (kind === "payment") {
     const amountPending = formData.get("amountPending") === "1";
     return {
@@ -2465,6 +2835,8 @@ function buildItem(kind, formData, current) {
       category: formData.get("category"),
       memo: formData.get("memo").trim(),
       active: current?.active ?? true,
+      createdAt: current?.createdAt || timestamp,
+      updatedAt: timestamp,
     };
   }
 
@@ -2480,6 +2852,8 @@ function buildItem(kind, formData, current) {
       annualGoal: parseAmount(formData.get("annualGoal")),
       currentAmount: parseAmount(formData.get("currentAmount")),
       memo: formData.get("memo").trim(),
+      createdAt: current?.createdAt || timestamp,
+      updatedAt: timestamp,
     };
   }
 
@@ -2493,6 +2867,8 @@ function buildItem(kind, formData, current) {
     annualGoal: parseAmount(formData.get("annualGoal")),
     currentValue: parseAmount(formData.get("currentValue")),
     memo: formData.get("memo").trim(),
+    createdAt: current?.createdAt || timestamp,
+    updatedAt: timestamp,
   };
 }
 
@@ -2501,6 +2877,7 @@ function getCollection(kind) {
     payment: state.payments,
     saving: state.savings,
     nisa: state.nisa,
+    nav: state.profile.navItems,
   }[kind];
 }
 
@@ -2616,15 +2993,26 @@ function finishReorder(commit) {
 
 function findReorderTarget(x, y) {
   if (!reorderDrag) return null;
-  return document
-    .elementsFromPoint(x, y)
-    .map((element) => element.closest?.(`[data-reorder-item="${reorderDrag.kind}"]`))
-    .find((element) => element && element.parentElement === reorderDrag.container);
+  const items = Array.from(reorderDrag.container.querySelectorAll(`[data-reorder-item="${reorderDrag.kind}"]`)).filter(
+    (element) => element !== reorderDrag.itemElement,
+  );
+  if (!items.length) return null;
+
+  return items.reduce(
+    (closest, item) => {
+      const rect = item.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const distance = Math.hypot(centerX - x, centerY - y);
+      return distance < closest.distance ? { item, distance } : closest;
+    },
+    { item: null, distance: Number.POSITIVE_INFINITY },
+  ).item;
 }
 
 function shouldInsertBeforeTarget(event, target) {
   const rect = target.getBoundingClientRect();
-  if (reorderDrag?.kind === "payment") {
+  if (reorderDrag?.kind === "payment" || reorderDrag?.kind === "nav") {
     return event.clientY < rect.top + rect.height / 2;
   }
 
@@ -2643,6 +3031,7 @@ function applyManualOrder(kind, orderedIds) {
   const orderedSet = new Set(orderedIds);
   const orderedItems = orderedIds.map((id) => byId.get(id)).filter(Boolean);
   const remainingItems = collection.filter((item) => !orderedSet.has(item.id));
+  setSortMode(kind, "manual");
   collection.splice(0, collection.length, ...orderedItems, ...remainingItems);
 }
 
@@ -2657,12 +3046,50 @@ function toggleStatus(kind, id, checked = null) {
 
 function switchTab(tab) {
   activeTab = tab;
-  document.querySelectorAll(".nav-tab").forEach((button) => {
-    button.classList.toggle("active", button.dataset.tab === tab);
-  });
+  const viewName = viewNameForTab(tab);
   document.querySelectorAll(".view").forEach((view) => {
-    view.classList.toggle("active", view.dataset.view === tab);
+    view.classList.toggle("active", view.dataset.view === viewName);
   });
+  render();
+}
+
+function handleSortModeChange(kind, mode) {
+  setSortMode(kind, mode);
+  showToast(mode === "manual" ? "手動順に切り替えました。" : "自動ソートに切り替えました。");
+  render();
+}
+
+function handleAddNavItem() {
+  const label = window.prompt("左メニューに追加する項目名を入力してください。");
+  const name = label?.trim();
+  if (!name) return;
+
+  const timestamp = Date.now();
+  const item = {
+    id: createId(),
+    label: name,
+    icon: "•",
+    builtIn: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  state.profile.navItems.push(item);
+  setSortMode("nav", "manual");
+  activeTab = item.id;
+  showToast("メニュー項目を追加しました。");
+  render();
+}
+
+function deleteNavItem(id) {
+  const item = state.profile.navItems.find((entry) => entry.id === id);
+  if (!item || item.builtIn) return;
+
+  const confirmed = window.confirm(`${item.label}を左メニューから削除しますか？`);
+  if (!confirmed) return;
+
+  state.profile.navItems = state.profile.navItems.filter((entry) => entry.id !== id);
+  if (activeTab === id) activeTab = "dashboard";
+  showToast("メニュー項目を削除しました。");
   render();
 }
 
@@ -2980,9 +3407,27 @@ elements.monthlyIncome.addEventListener("change", (event) => {
   render();
 });
 
+elements.paymentSortMode?.addEventListener("change", (event) => handleSortModeChange("payment", event.target.value));
+elements.savingSortMode?.addEventListener("change", (event) => handleSortModeChange("saving", event.target.value));
+elements.nisaSortMode?.addEventListener("change", (event) => handleSortModeChange("nisa", event.target.value));
+elements.navSortMode?.addEventListener("change", (event) => handleSortModeChange("nav", event.target.value));
+elements.addNavItemButton?.addEventListener("click", handleAddNavItem);
+
 document.addEventListener("pointerdown", handleReorderPointerDown);
 
 document.addEventListener("click", (event) => {
+  const navButton = event.target.closest(".nav-tab[data-tab]");
+  if (navButton) {
+    switchTab(navButton.dataset.tab);
+    return;
+  }
+
+  const deleteNavButton = event.target.closest("[data-delete-nav]");
+  if (deleteNavButton) {
+    deleteNavItem(deleteNavButton.dataset.deleteNav);
+    return;
+  }
+
   const editButton = event.target.closest("[data-edit]");
   if (editButton) {
     openForm(editButton.dataset.edit, editButton.dataset.id);
