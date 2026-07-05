@@ -213,9 +213,11 @@ code {
 
 .nav-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
+  cursor: grab;
+  touch-action: none;
 }
 
 .nav-tab {
@@ -230,6 +232,7 @@ code {
   background: transparent;
   color: var(--muted);
   text-align: left;
+  cursor: inherit;
   font-weight: 700;
 }
 
@@ -246,21 +249,19 @@ code {
   color: var(--ink);
 }
 
-.nav-drag {
-  width: 34px;
-  height: 44px;
-}
-
 .nav-delete {
   display: grid;
   place-items: center;
-  width: 34px;
+  min-width: 52px;
   height: 34px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
   font-weight: 900;
+  touch-action: manipulation;
 }
 
 .nav-delete:hover {
@@ -709,49 +710,43 @@ td {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 76px;
+  min-width: 36px;
 }
 
-.drag-handle {
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--muted);
+[data-reorder-item] {
   cursor: grab;
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1;
   touch-action: none;
   user-select: none;
 }
 
-.drag-handle:hover {
-  border-color: #bdd4cf;
-  background: #edf6f3;
-  color: var(--teal-dark);
-}
-
-.drag-handle.nav-drag {
-  width: 34px;
-  height: 44px;
+[data-reorder-item] button,
+[data-reorder-item] input,
+[data-reorder-item] label,
+[data-reorder-item] select,
+[data-reorder-item] textarea {
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: auto;
 }
 
 body.is-reordering {
   user-select: none;
 }
 
-body.is-reordering .drag-handle {
+body.is-reordering [data-reorder-item] {
   cursor: grabbing;
 }
 
+.nav-item.is-dragging,
 tr.is-dragging td,
 .bucket-card.is-dragging {
   background: #edf6f3;
+}
+
+.nav-item.is-dragging {
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(30, 70, 61, 0.12);
+  opacity: 0.82;
 }
 
 tr.is-dragging td {
@@ -1458,7 +1453,7 @@ tr.is-dragging td {
               <table>
                 <thead>
                   <tr>
-                    <th>並替 / 完了</th>
+                    <th>完了</th>
                     <th>名称</th>
                     <th>カテゴリ</th>
                     <th>支払日</th>
@@ -1725,6 +1720,7 @@ let pendingResolver = null;
 let pendingTotpHint = null;
 let pendingEnrollmentSecret = null;
 let reorderDrag = null;
+let suppressNextClick = false;
 
 const configReady = hasFirebaseConfig(firebaseConfig);
 
@@ -2301,14 +2297,11 @@ function renderNavTabs() {
     .map(
       (item) => `
         <div class="nav-item" data-reorder-item="nav" data-id="${item.id}">
-          <button class="drag-handle nav-drag" type="button" data-reorder-handle data-reorder-kind="nav" aria-label="${escapeAttribute(item.label)}を並び替え">
-            <span aria-hidden="true">↕</span>
-          </button>
-          <button class="nav-tab ${activeTab === item.id ? "active" : ""}" type="button" data-tab="${item.id}">
+          <div class="nav-tab ${activeTab === item.id ? "active" : ""}" role="button" tabindex="0" data-tab="${item.id}">
             <span aria-hidden="true">${escapeHtml(item.icon || "•")}</span>
             <span>${escapeHtml(item.label)}</span>
-          </button>
-          ${item.builtIn ? "" : `<button class="nav-delete" type="button" data-delete-nav="${item.id}" aria-label="${escapeAttribute(item.label)}を削除">×</button>`}
+          </div>
+          ${item.builtIn ? "" : `<button class="nav-delete" type="button" data-delete-nav="${item.id}" aria-label="${escapeAttribute(item.label)}を削除">削除</button>`}
         </div>
       `,
     )
@@ -2491,11 +2484,8 @@ function renderPayments() {
     .map(
       (payment) => `
         <tr data-reorder-item="payment" data-id="${payment.id}">
-          <td data-label="並替 / 完了">
+          <td data-label="完了">
             <div class="reorder-cell">
-              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="payment" aria-label="${escapeAttribute(payment.name)}を並び替え">
-                <span aria-hidden="true">↕</span>
-              </button>
               <label class="check-wrap" aria-label="${escapeHtml(payment.name)}を完了">
                 <input type="checkbox" data-status="payment" data-id="${payment.id}" ${status.payments[payment.id] ? "checked" : ""} />
               </label>
@@ -2544,9 +2534,6 @@ function renderSavings() {
         <article class="bucket-card" data-reorder-item="saving" data-id="${saving.id}">
           <div class="bucket-top">
             <div class="bucket-title-row">
-              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="saving" aria-label="${escapeAttribute(saving.name)}を並び替え">
-                <span aria-hidden="true">↕</span>
-              </button>
               <strong>${escapeHtml(saving.name)}</strong>
             </div>
             <span class="tag ${saving.type}">${typeLabels[saving.type]}</span>
@@ -2605,9 +2592,6 @@ function renderNisa() {
         <article class="bucket-card" data-reorder-item="nisa" data-id="${item.id}">
           <div class="bucket-top">
             <div class="bucket-title-row">
-              <button class="drag-handle" type="button" data-reorder-handle data-reorder-kind="nisa" aria-label="${escapeAttribute(item.name)}を並び替え">
-                <span aria-hidden="true">↕</span>
-              </button>
               <strong>${escapeHtml(item.name)}</strong>
             </div>
             <span class="tag nisa">NISA</span>
@@ -2908,11 +2892,10 @@ function deleteItem(kind, id) {
 }
 
 function handleReorderPointerDown(event) {
-  const handle = event.target.closest("[data-reorder-handle]");
-  if (!handle || event.button > 0) return;
+  if (event.button > 0 || isInteractiveReorderTarget(event.target)) return;
 
-  const kind = handle.dataset.reorderKind;
-  const itemElement = handle.closest(`[data-reorder-item="${kind}"]`);
+  const itemElement = event.target.closest("[data-reorder-item]");
+  const kind = itemElement?.dataset.reorderItem;
   const container = itemElement?.parentElement;
   if (!kind || !itemElement || !container) return;
 
@@ -2921,32 +2904,35 @@ function handleReorderPointerDown(event) {
     id: itemElement.dataset.id,
     container,
     itemElement,
-    handle,
+    controlElement: itemElement,
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
+    started: false,
     moved: false,
     initialOrder: getDomOrder(container, kind),
   };
 
-  itemElement.classList.add("is-dragging");
-  container.classList.add("is-reordering-list");
-  document.body.classList.add("is-reordering");
-  handle.setPointerCapture?.(event.pointerId);
+  itemElement.setPointerCapture?.(event.pointerId);
   document.addEventListener("pointermove", handleReorderPointerMove, { passive: false });
   document.addEventListener("pointerup", handleReorderPointerUp);
   document.addEventListener("pointercancel", handleReorderPointerCancel);
-  event.preventDefault();
 }
 
 function handleReorderPointerMove(event) {
   if (!reorderDrag || event.pointerId !== reorderDrag.pointerId) return;
-  event.preventDefault();
 
   const movedDistance = Math.abs(event.clientX - reorderDrag.startX) + Math.abs(event.clientY - reorderDrag.startY);
-  if (movedDistance > 6) {
-    reorderDrag.moved = true;
+  if (!reorderDrag.started && movedDistance <= 8) {
+    return;
   }
+
+  if (!reorderDrag.started) {
+    startReorderDrag();
+  }
+
+  reorderDrag.moved = true;
+  event.preventDefault();
 
   const target = findReorderTarget(event.clientX, event.clientY);
   if (!target || target === reorderDrag.itemElement) return;
@@ -2972,7 +2958,7 @@ function finishReorder(commit) {
   drag.itemElement.classList.remove("is-dragging");
   drag.container.classList.remove("is-reordering-list");
   document.body.classList.remove("is-reordering");
-  drag.handle.releasePointerCapture?.(drag.pointerId);
+  drag.controlElement.releasePointerCapture?.(drag.pointerId);
   document.removeEventListener("pointermove", handleReorderPointerMove);
   document.removeEventListener("pointerup", handleReorderPointerUp);
   document.removeEventListener("pointercancel", handleReorderPointerCancel);
@@ -2983,12 +2969,31 @@ function finishReorder(commit) {
     return;
   }
 
+  if (!drag.started) return;
+
   const nextOrder = getDomOrder(drag.container, drag.kind);
   if (!drag.moved || nextOrder.join("|") === drag.initialOrder.join("|")) return;
 
   applyManualOrder(drag.kind, nextOrder);
+  suppressNextClick = true;
   showToast("並び順を保存しました。");
   render();
+}
+
+function startReorderDrag() {
+  if (!reorderDrag) return;
+  reorderDrag.started = true;
+  reorderDrag.itemElement.classList.add("is-dragging");
+  reorderDrag.container.classList.add("is-reordering-list");
+  document.body.classList.add("is-reordering");
+}
+
+function isInteractiveReorderTarget(target) {
+  return Boolean(
+    target.closest(
+      'button, input, select, textarea, label, a, [data-no-reorder], .small-button, .button, .sort-field',
+    ),
+  );
 }
 
 function findReorderTarget(x, y) {
@@ -3022,14 +3027,22 @@ function shouldInsertBeforeTarget(event, target) {
 }
 
 function getDomOrder(container, kind) {
-  return Array.from(container.querySelectorAll(`[data-reorder-item="${kind}"]`)).map((element) => element.dataset.id);
+  const seen = new Set();
+  return Array.from(container.querySelectorAll(`[data-reorder-item="${kind}"]`))
+    .map((element) => element.dataset.id)
+    .filter((id) => {
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
 }
 
 function applyManualOrder(kind, orderedIds) {
   const collection = getCollection(kind);
   const byId = new Map(collection.map((item) => [item.id, item]));
-  const orderedSet = new Set(orderedIds);
-  const orderedItems = orderedIds.map((id) => byId.get(id)).filter(Boolean);
+  const uniqueIds = [...new Set(orderedIds)];
+  const orderedSet = new Set(uniqueIds);
+  const orderedItems = uniqueIds.map((id) => byId.get(id)).filter(Boolean);
   const remainingItems = collection.filter((item) => !orderedSet.has(item.id));
   setSortMode(kind, "manual");
   collection.splice(0, collection.length, ...orderedItems, ...remainingItems);
@@ -3416,6 +3429,13 @@ elements.addNavItemButton?.addEventListener("click", handleAddNavItem);
 document.addEventListener("pointerdown", handleReorderPointerDown);
 
 document.addEventListener("click", (event) => {
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
   const navButton = event.target.closest(".nav-tab[data-tab]");
   if (navButton) {
     switchTab(navButton.dataset.tab);
@@ -3444,6 +3464,13 @@ document.addEventListener("click", (event) => {
   if (toggleButton) {
     toggleStatus(toggleButton.dataset.toggle, toggleButton.dataset.id);
   }
+});
+
+document.addEventListener("keydown", (event) => {
+  const navButton = event.target.closest(".nav-tab[data-tab]");
+  if (!navButton || !["Enter", " "].includes(event.key)) return;
+  event.preventDefault();
+  switchTab(navButton.dataset.tab);
 });
 
 document.addEventListener("change", (event) => {
