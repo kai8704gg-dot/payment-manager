@@ -934,6 +934,88 @@ tr.is-complete td,
   font-weight: 800;
 }
 
+.yearly-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.year-summary-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 14px;
+}
+
+.year-summary-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.year-summary-card strong {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.yearly-wrap {
+  max-width: 100%;
+}
+
+.year-table {
+  min-width: 1320px;
+}
+
+.year-table th,
+.year-table td {
+  min-width: 88px;
+  vertical-align: top;
+}
+
+.year-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.year-item-head {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 180px;
+  background: var(--surface);
+}
+
+.year-item-head strong,
+.year-item-head span,
+.year-cell strong,
+.year-cell span {
+  display: block;
+}
+
+.year-item-head span,
+.year-cell span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.year-cell.done {
+  background: #f0f8f3;
+}
+
+.year-cell.pending {
+  background: #fffaf0;
+}
+
+.year-total-cell {
+  background: #fbfcfa;
+}
+
 .check-wrap {
   display: inline-grid;
   place-items: center;
@@ -1173,6 +1255,10 @@ tr.is-complete td,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .yearly-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .status-overview {
     grid-template-columns: 1fr;
   }
@@ -1229,6 +1315,7 @@ tr.is-complete td,
   .settings-panel,
   .summary-grid,
   .bucket-grid,
+  .yearly-summary,
   .csv-grid,
   .form-grid {
     grid-template-columns: 1fr;
@@ -1342,6 +1429,34 @@ tr.is-complete td,
   tr[data-reorder-item="payment"] .action-cell::before {
     content: "";
   }
+
+  .yearly-wrap {
+    overflow-x: auto;
+  }
+
+  .year-table {
+    min-width: 1320px;
+  }
+
+  .year-table thead {
+    display: table-header-group;
+  }
+
+  .year-table tbody {
+    display: table-row-group;
+  }
+
+  .year-table tr {
+    display: table-row;
+  }
+
+  .year-table th,
+  .year-table td {
+    display: table-cell;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 10px;
+    text-align: left;
+  }
 }
 
 </style>
@@ -1448,6 +1563,10 @@ tr.is-complete td,
             <span aria-hidden="true">▦</span>
             <span>ダッシュボード</span>
           </button>
+          <button class="nav-tab" type="button" data-tab="yearly">
+            <span aria-hidden="true">▤</span>
+            <span>年間一覧</span>
+          </button>
           <button class="nav-tab" type="button" data-tab="payments">
             <span aria-hidden="true">□</span>
             <span>支払い</span>
@@ -1486,9 +1605,9 @@ tr.is-complete td,
             <h2 id="viewTitle">今月の資金計画</h2>
           </div>
           <div class="topbar-actions">
-            <button class="button secondary" id="copyPreviousMonthButton" type="button">
+            <button class="button secondary hidden" id="copyPreviousMonthButton" type="button">
               <span aria-hidden="true">←</span>
-              <span>前月コピー</span>
+              <span>支払いを先月からコピー</span>
             </button>
             <button class="button primary hidden" id="contextAddButton" type="button" data-open-form="">
               <span aria-hidden="true">＋</span>
@@ -1535,7 +1654,10 @@ tr.is-complete td,
                 <p class="eyebrow">Annual Goal</p>
                 <h3>貯金目標の進捗</h3>
               </div>
-              <span class="pill" id="annualGoalTotal">年間目標 ¥0</span>
+              <div class="panel-tools">
+                <span class="pill" id="annualGoalTotal">年間目標 ¥0</span>
+                <button class="small-button" type="button" data-go-tab="yearly">年間一覧を見る</button>
+              </div>
             </div>
             <div class="goal-stack" id="goalStack"></div>
           </section>
@@ -1571,6 +1693,49 @@ tr.is-complete td,
               <div class="allocation-chart" id="allocationChart" aria-label="月次配分グラフ"></div>
               <div class="legend" id="allocationLegend"></div>
             </div>
+          </section>
+        </section>
+
+        <section class="view" id="yearlyView" data-view="yearly" aria-label="年間一覧">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Yearly Overview</p>
+                <h3>年間一覧</h3>
+              </div>
+              <span class="pill" id="yearlyYearLabel">-</span>
+            </div>
+            <div class="yearly-summary" id="yearlySummary"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Payments</p>
+                <h3>支払い 年間一覧</h3>
+              </div>
+            </div>
+            <div class="table-wrap yearly-wrap" id="yearlyPaymentsTable"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Savings</p>
+                <h3>貯金 年間一覧</h3>
+              </div>
+            </div>
+            <div class="table-wrap yearly-wrap" id="yearlySavingsTable"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">NISA</p>
+                <h3>つみたてNISA 年間一覧</h3>
+              </div>
+            </div>
+            <div class="table-wrap yearly-wrap" id="yearlyNisaTable"></div>
           </section>
         </section>
 
@@ -2077,6 +2242,11 @@ const elements = {
   nisaGrid: document.querySelector("#nisaGrid"),
   nisaCount: document.querySelector("#nisaCount"),
   nisaSortMode: document.querySelector("#nisaSortMode"),
+  yearlyYearLabel: document.querySelector("#yearlyYearLabel"),
+  yearlySummary: document.querySelector("#yearlySummary"),
+  yearlyPaymentsTable: document.querySelector("#yearlyPaymentsTable"),
+  yearlySavingsTable: document.querySelector("#yearlySavingsTable"),
+  yearlyNisaTable: document.querySelector("#yearlyNisaTable"),
   itemDialog: document.querySelector("#itemDialog"),
   itemForm: document.querySelector("#itemForm"),
   formKicker: document.querySelector("#formKicker"),
@@ -2376,9 +2546,23 @@ function formatMonthValue(value) {
 function normalizeMonthlyStatus(status = {}) {
   return {
     payments: { ...(status.payments || {}) },
+    paymentAmounts: normalizePaymentMonthAmounts(status.paymentAmounts || {}),
     savings: { ...(status.savings || {}) },
     nisa: { ...(status.nisa || {}) },
   };
+}
+
+function normalizePaymentMonthAmounts(input = {}) {
+  return Object.fromEntries(
+    Object.entries(input || {}).map(([id, value]) => [
+      id,
+      {
+        amount: parseAmount(value?.amount),
+        amountPending: Boolean(value?.amountPending),
+        amountNote: value?.amountNote || "",
+      },
+    ]),
+  );
 }
 
 function selectedMonthStatus() {
@@ -2387,6 +2571,10 @@ function selectedMonthStatus() {
   state.monthlyStatus[month] = normalizeMonthlyStatus(existing);
 
   return state.monthlyStatus[month];
+}
+
+function readMonthStatus(month) {
+  return normalizeMonthlyStatus(state.monthlyStatus[month] || {});
 }
 
 function getYearMonths(year) {
@@ -2401,21 +2589,42 @@ function activePayments() {
   return state.payments.filter((payment) => payment.active !== false);
 }
 
-function paymentAmountValue(payment) {
-  return parseAmount(payment.amount);
+function paymentMonthData(payment, month = state.profile.selectedMonth || currentMonth) {
+  const monthlyData = readMonthStatus(month).paymentAmounts[payment.id];
+  return monthlyData || {
+    amount: parseAmount(payment.amount),
+    amountPending: Boolean(payment.amountPending),
+    amountNote: payment.amountNote || "",
+  };
 }
 
-function paymentAmountLabel(payment) {
-  const amount = paymentAmountValue(payment);
-  if (payment.amountPending) {
+function paymentAmountValue(payment, month = state.profile.selectedMonth || currentMonth) {
+  return parseAmount(paymentMonthData(payment, month).amount);
+}
+
+function paymentAmountLabel(payment, month = state.profile.selectedMonth || currentMonth) {
+  const data = paymentMonthData(payment, month);
+  const amount = parseAmount(data.amount);
+  if (data.amountPending) {
     return amount > 0 ? `見込み ${formatYen(amount)}` : "未確定";
   }
   return formatYen(amount);
 }
 
-function paymentAmountNote(payment) {
-  if (!payment.amountPending) return "";
-  return payment.amountNote || "金額未確定";
+function paymentAmountNote(payment, month = state.profile.selectedMonth || currentMonth) {
+  const data = paymentMonthData(payment, month);
+  if (!data.amountPending) return "";
+  return data.amountNote || "金額未確定";
+}
+
+function setPaymentMonthAmount(month, paymentId, data) {
+  const status = state.monthlyStatus[month] || {};
+  state.monthlyStatus[month] = normalizeMonthlyStatus(status);
+  state.monthlyStatus[month].paymentAmounts[paymentId] = {
+    amount: parseAmount(data.amount),
+    amountPending: Boolean(data.amountPending),
+    amountNote: data.amountPending ? data.amountNote || "" : "",
+  };
 }
 
 function savingsByType(type) {
@@ -2505,7 +2714,7 @@ function paidYearTotal(collectionName, itemId, amountKey, year) {
 }
 
 function render() {
-  if (!["dashboard", "payments", "savings", "nisa"].includes(activeTab)) {
+  if (!["dashboard", "yearly", "payments", "savings", "nisa"].includes(activeTab)) {
     activeTab = "dashboard";
   }
 
@@ -2525,6 +2734,7 @@ function render() {
   renderPayments();
   renderSavings();
   renderNisa();
+  renderYearlyOverview();
   saveState();
 }
 
@@ -2557,6 +2767,7 @@ function renderTopbarActions() {
   const current = addLabels[activeTab];
   if (!elements.contextAddButton || !elements.contextAddLabel) return;
 
+  elements.copyPreviousMonthButton?.classList.toggle("hidden", activeTab !== "payments");
   elements.contextAddButton.classList.toggle("hidden", !current);
   if (!current) return;
   elements.contextAddButton.dataset.openForm = current.kind;
@@ -2566,6 +2777,7 @@ function renderTopbarActions() {
 function getViewTitle() {
   const titles = {
     dashboard: "今月の資金計画",
+    yearly: "年間一覧",
     payments: "毎月の支払い",
     savings: "貯金の管理",
     nisa: "つみたてNISA",
@@ -2792,6 +3004,117 @@ function renderMonthlyStatusOverview() {
     .join("");
 }
 
+function renderYearlyOverview() {
+  if (!elements.yearlyPaymentsTable || !elements.yearlySavingsTable || !elements.yearlyNisaTable) return;
+
+  const year = Number(state.profile.targetYear) || today.getFullYear();
+  const months = getYearMonths(year);
+  const payments = sortedItems("payment", activePayments());
+  const savings = sortedItems("saving", state.savings);
+  const nisaItems = sortedItems("nisa", state.nisa);
+  const paymentTotal = sum(payments, (payment) => sum(months, (month) => paymentAmountValue(payment, month)));
+  const savingTotal = sum(savings, (saving) => sum(months, (month) => scheduledContribution(saving, month)));
+  const nisaTotal = sum(nisaItems, (item) => sum(months, (month) => scheduledContribution(item, month)));
+
+  elements.yearlyYearLabel.textContent = `${year}年`;
+  elements.yearlySummary.innerHTML = [
+    { label: "年間支払い", value: paymentTotal },
+    { label: "年間貯金予定", value: savingTotal },
+    { label: "年間NISA予定", value: nisaTotal },
+    { label: "年間合計", value: paymentTotal + savingTotal + nisaTotal },
+  ]
+    .map(
+      (item) => `
+        <article class="year-summary-card">
+          <span>${item.label}</span>
+          <strong>${formatYen(item.value)}</strong>
+        </article>
+      `,
+    )
+    .join("");
+
+  elements.yearlyPaymentsTable.innerHTML = yearlyTableHtml({
+    kind: "payment",
+    months,
+    items: payments,
+    metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・毎月${item.dueDay}日`,
+    amountLabel: (item, month) => paymentAmountLabel(item, month),
+    amountValue: (item, month) => paymentAmountValue(item, month),
+    statusLabel: (done) => (done ? "完了" : "未完了"),
+    emptyLabel: "支払い項目がありません。",
+  });
+
+  elements.yearlySavingsTable.innerHTML = yearlyTableHtml({
+    kind: "saving",
+    months,
+    items: savings,
+    metaLabel: (item) => typeLabels[item.type] || "貯金",
+    amountLabel: (item, month) => formatYen(scheduledContribution(item, month)),
+    amountValue: (item, month) => scheduledContribution(item, month),
+    statusLabel: (done) => (done ? "入金済" : "未入金"),
+    emptyLabel: "貯金項目がありません。",
+  });
+
+  elements.yearlyNisaTable.innerHTML = yearlyTableHtml({
+    kind: "nisa",
+    months,
+    items: nisaItems,
+    metaLabel: () => "積立予定",
+    amountLabel: (item, month) => formatYen(scheduledContribution(item, month)),
+    amountValue: (item, month) => scheduledContribution(item, month),
+    statusLabel: (done) => (done ? "実行済" : "未実行"),
+    emptyLabel: "NISA項目がありません。",
+  });
+}
+
+function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountValue, statusLabel, emptyLabel }) {
+  const monthHeaders = months.map((month) => `<th>${monthNumberFromValue(month)}月</th>`).join("");
+  const colspan = months.length + 2;
+
+  const rows = items.length
+    ? items
+        .map((item) => {
+          const key = statusKey(kind);
+          const cells = months
+            .map((month) => {
+              const done = Boolean(readMonthStatus(month)[key]?.[item.id]);
+              return `
+                <td class="year-cell ${done ? "done" : "pending"}">
+                  <strong>${escapeHtml(amountLabel(item, month))}</strong>
+                  <span>${statusLabel(done)}</span>
+                </td>
+              `;
+            })
+            .join("");
+          const total = sum(months, (month) => amountValue(item, month));
+          return `
+            <tr>
+              <th class="year-item-head">
+                <strong>${escapeHtml(item.name)}</strong>
+                <span>${escapeHtml(metaLabel(item))}</span>
+              </th>
+              ${cells}
+              <td class="year-total-cell"><strong>${formatYen(total)}</strong></td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `<tr><td colspan="${colspan}"><div class="empty-state">${emptyLabel}</div></td></tr>`;
+
+  return `
+    <table class="year-table">
+      <thead>
+        <tr>
+          <th>項目</th>
+          ${monthHeaders}
+          <th>合計</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 function renderPayments() {
   const status = selectedMonthStatus();
   const payments = sortedItems("payment", activePayments());
@@ -2825,6 +3148,7 @@ function renderPayments() {
           </td>
           <td data-label="メモ">${escapeHtml(payment.memo || "")}</td>
           <td class="action-cell" data-label="">
+            <button class="small-button" type="button" data-copy-payment-amount="${payment.id}">先月金額</button>
             <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
             <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
           </td>
@@ -3008,16 +3332,18 @@ function formTitle(kind, isEdit) {
 
 function formFields(kind, item) {
   if (kind === "payment") {
+    const selectedMonth = state.profile.selectedMonth || currentMonth;
+    const monthlyPayment = item ? paymentMonthData(item, selectedMonth) : null;
     return `
       ${textField("name", "名称", item?.name || "", "例: 家賃")}
       <div class="field-group checkbox-field span-2">
         <label>
-          <input id="amountPending" name="amountPending" type="checkbox" value="1" ${item?.amountPending ? "checked" : ""} />
+          <input id="amountPending" name="amountPending" type="checkbox" value="1" ${monthlyPayment?.amountPending ? "checked" : ""} />
           <span>金額未確定</span>
         </label>
-        <span>請求額がまだ分からない場合に使います。見込み額を入れるか、0のまま保存できます。</span>
+        <span>${formatMonthValue(selectedMonth)}分の金額です。請求額がまだ分からない場合に使います。</span>
       </div>
-      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1", false, "例: 1234")}
+      ${numberField("amount", "対象月の金額または見込み額", monthlyPayment?.amount ?? "", "1", false, "例: 1234")}
       ${numberField("dueDay", "支払日", item?.dueDay || "", "1", true, "例: 27")}
       <div class="field-group">
         <label for="category">カテゴリ</label>
@@ -3028,7 +3354,7 @@ function formFields(kind, item) {
             .join("")}
         </select>
       </div>
-      ${textField("amountNote", "未確定メモ", item?.amountNote || "", "例: 請求確定後に入力", false)}
+      ${textField("amountNote", "未確定メモ", monthlyPayment?.amountNote || "", "例: 請求確定後に入力", false)}
       ${memoField(item?.memo || "")}
     `;
   }
@@ -3121,13 +3447,21 @@ function handleFormSubmit(event) {
   const formData = new FormData(elements.itemForm);
   const collection = getCollection(editing.kind);
   const current = editing.id ? collection.find((item) => item.id === editing.id) : null;
-  const nextItem = buildItem(editing.kind, formData, current);
+  const built = buildItem(editing.kind, formData, current);
+  const nextItem = built.item;
 
   if (current) {
     Object.assign(current, nextItem);
+    if (editing.kind === "payment") {
+      setPaymentMonthAmount(state.profile.selectedMonth || currentMonth, current.id, built.paymentMonth);
+    }
     showToast("更新しました。");
   } else {
-    collection.push({ id: createId(), ...nextItem });
+    const id = createId();
+    collection.push({ id, ...nextItem });
+    if (editing.kind === "payment") {
+      setPaymentMonthAmount(state.profile.selectedMonth || currentMonth, id, built.paymentMonth);
+    }
     showToast("追加しました。");
   }
 
@@ -3140,48 +3474,59 @@ function buildItem(kind, formData, current) {
   if (kind === "payment") {
     const amountPending = formData.get("amountPending") === "1";
     return {
-      name: formData.get("name").trim(),
-      amount: parseAmount(formData.get("amount")),
-      amountPending,
-      amountNote: amountPending ? formData.get("amountNote").trim() : "",
-      dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
-      category: formData.get("category") || "other",
-      memo: formData.get("memo").trim(),
-      active: current?.active ?? true,
-      createdAt: current?.createdAt || timestamp,
-      updatedAt: timestamp,
+      item: {
+        name: formData.get("name").trim(),
+        amount: current?.amount ?? parseAmount(formData.get("amount")),
+        amountPending: current?.amountPending ?? amountPending,
+        amountNote: current?.amountNote ?? (amountPending ? formData.get("amountNote").trim() : ""),
+        dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
+        category: formData.get("category") || "other",
+        memo: formData.get("memo").trim(),
+        active: current?.active ?? true,
+        createdAt: current?.createdAt || timestamp,
+        updatedAt: timestamp,
+      },
+      paymentMonth: {
+        amount: parseAmount(formData.get("amount")),
+        amountPending,
+        amountNote: amountPending ? formData.get("amountNote").trim() : "",
+      },
     };
   }
 
   if (kind === "saving") {
     return {
+      item: {
+        name: formData.get("name").trim(),
+        type: formData.get("type"),
+        monthlyContribution: parseAmount(formData.get("monthlyContribution")),
+        bonusMonth1: normalizeBonusMonth(formData.get("bonusMonth1")),
+        bonusAmount1: parseAmount(formData.get("bonusAmount1")),
+        bonusMonth2: normalizeBonusMonth(formData.get("bonusMonth2")),
+        bonusAmount2: parseAmount(formData.get("bonusAmount2")),
+        annualGoal: parseAmount(formData.get("annualGoal")),
+        currentAmount: parseAmount(formData.get("currentAmount")),
+        memo: formData.get("memo").trim(),
+        createdAt: current?.createdAt || timestamp,
+        updatedAt: timestamp,
+      },
+    };
+  }
+
+  return {
+    item: {
       name: formData.get("name").trim(),
-      type: formData.get("type"),
       monthlyContribution: parseAmount(formData.get("monthlyContribution")),
       bonusMonth1: normalizeBonusMonth(formData.get("bonusMonth1")),
       bonusAmount1: parseAmount(formData.get("bonusAmount1")),
       bonusMonth2: normalizeBonusMonth(formData.get("bonusMonth2")),
       bonusAmount2: parseAmount(formData.get("bonusAmount2")),
       annualGoal: parseAmount(formData.get("annualGoal")),
-      currentAmount: parseAmount(formData.get("currentAmount")),
+      currentValue: parseAmount(formData.get("currentValue")),
       memo: formData.get("memo").trim(),
       createdAt: current?.createdAt || timestamp,
       updatedAt: timestamp,
-    };
-  }
-
-  return {
-    name: formData.get("name").trim(),
-    monthlyContribution: parseAmount(formData.get("monthlyContribution")),
-    bonusMonth1: normalizeBonusMonth(formData.get("bonusMonth1")),
-    bonusAmount1: parseAmount(formData.get("bonusAmount1")),
-    bonusMonth2: normalizeBonusMonth(formData.get("bonusMonth2")),
-    bonusAmount2: parseAmount(formData.get("bonusAmount2")),
-    annualGoal: parseAmount(formData.get("annualGoal")),
-    currentValue: parseAmount(formData.get("currentValue")),
-    memo: formData.get("memo").trim(),
-    createdAt: current?.createdAt || timestamp,
-    updatedAt: timestamp,
+    },
   };
 }
 
@@ -3214,6 +3559,9 @@ function deleteItem(kind, id) {
   Object.values(state.monthlyStatus).forEach((monthStatus) => {
     const key = statusKey(kind);
     delete monthStatus[key]?.[id];
+    if (kind === "payment") {
+      delete monthStatus.paymentAmounts?.[id];
+    }
   });
   showToast("削除しました。");
   render();
@@ -3483,23 +3831,37 @@ function toggleStatus(kind, id, checked = null) {
   render();
 }
 
-function copyPreviousMonthStatus() {
+function copyPaymentAmountFromPreviousMonth(paymentId) {
   const selectedMonth = state.profile.selectedMonth || currentMonth;
   const previousMonth = previousMonthValue(selectedMonth);
-  const previousStatus = state.monthlyStatus[previousMonth];
+  const payment = state.payments.find((item) => item.id === paymentId);
+  if (!payment) return;
 
-  if (!previousStatus) {
-    showToast(`${formatMonthValue(previousMonth)}の完了データがありません。`);
+  const previousData = paymentMonthData(payment, previousMonth);
+  setPaymentMonthAmount(selectedMonth, payment.id, previousData);
+  showToast(`${payment.name}の金額を${formatMonthValue(previousMonth)}からコピーしました。`);
+  render();
+}
+
+function copyPreviousMonthPaymentAmounts() {
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const previousMonth = previousMonthValue(selectedMonth);
+  const payments = activePayments();
+
+  if (!payments.length) {
+    showToast("コピーできる支払い項目がありません。");
     return;
   }
 
   const confirmed = window.confirm(
-    `${formatMonthValue(previousMonth)}の完了状態を${formatMonthValue(selectedMonth)}へコピーしますか？`,
+    `${formatMonthValue(previousMonth)}の支払い金額を${formatMonthValue(selectedMonth)}へコピーしますか？`,
   );
   if (!confirmed) return;
 
-  state.monthlyStatus[selectedMonth] = normalizeMonthlyStatus(previousStatus);
-  showToast("前月の完了状態をコピーしました。");
+  payments.forEach((payment) => {
+    setPaymentMonthAmount(selectedMonth, payment.id, paymentMonthData(payment, previousMonth));
+  });
+  showToast("支払い金額を前月からコピーしました。");
   render();
 }
 
@@ -3521,9 +3883,19 @@ function exportCsv(kind) {
   const schema = csvSchemas[kind];
   if (!schema) return;
 
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
   const rows = [
     schema.columns.map(([, label]) => label),
-    ...getCollection(kind).map((item) => schema.columns.map(([key]) => csvCellValue(item[key]))),
+    ...getCollection(kind).map((item) => {
+      const source =
+        kind === "payment"
+          ? {
+              ...item,
+              ...paymentMonthData(item, selectedMonth),
+            }
+          : item;
+      return schema.columns.map(([key]) => csvCellValue(source[key]));
+    }),
   ];
   const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
   downloadTextFile(`支払いと貯金ノート-${schema.filename}-${state.profile.selectedMonth || currentMonth}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
@@ -3733,6 +4105,11 @@ function pruneMonthlyStatuses(kind) {
     Object.keys(monthStatus[key] || {}).forEach((id) => {
       if (!ids.has(id)) delete monthStatus[key][id];
     });
+    if (kind === "payment") {
+      Object.keys(monthStatus.paymentAmounts || {}).forEach((id) => {
+        if (!ids.has(id)) delete monthStatus.paymentAmounts[id];
+      });
+    }
   });
 }
 
@@ -4015,7 +4392,7 @@ elements.passwordResetButton.addEventListener("click", handlePasswordReset);
 elements.signOutButton.addEventListener("click", handleSignOut);
 elements.openSettingsButton.addEventListener("click", () => elements.settingsDialog.showModal());
 elements.closeSettingsDialog.addEventListener("click", () => elements.settingsDialog.close());
-elements.copyPreviousMonthButton.addEventListener("click", copyPreviousMonthStatus);
+elements.copyPreviousMonthButton.addEventListener("click", copyPreviousMonthPaymentAmounts);
 
 elements.selectedMonth.addEventListener("change", (event) => {
   state.profile.selectedMonth = event.target.value || currentMonth;
@@ -4049,6 +4426,18 @@ document.addEventListener("click", (event) => {
   const navButton = event.target.closest(".nav-tab[data-tab]");
   if (navButton) {
     switchTab(navButton.dataset.tab);
+    return;
+  }
+
+  const goTabButton = event.target.closest("[data-go-tab]");
+  if (goTabButton) {
+    switchTab(goTabButton.dataset.goTab);
+    return;
+  }
+
+  const copyPaymentButton = event.target.closest("[data-copy-payment-amount]");
+  if (copyPaymentButton) {
+    copyPaymentAmountFromPreviousMonth(copyPaymentButton.dataset.copyPaymentAmount);
     return;
   }
 
@@ -4095,6 +4484,7 @@ initializeFirebase();
 </script>
   </body>
 </html>
+
 
 
 
