@@ -468,6 +468,35 @@ textarea:focus {
   line-height: 1.2;
 }
 
+.month-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.month-jump-field {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.month-jump-field span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.month-jump-field input {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-weight: 800;
+}
+
+.month-nav-button {
+  flex: 0 0 auto;
+}
+
 .view {
   display: none;
 }
@@ -1300,6 +1329,16 @@ tr.is-complete td,
   .topbar {
     display: grid;
   }
+
+  .month-switcher {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .month-jump-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1329,6 +1368,11 @@ tr.is-complete td,
   .sidebar-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .month-switcher {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
   }
 
   .topbar-actions .button,
@@ -1603,6 +1647,14 @@ tr.is-complete td,
           <div>
             <p class="eyebrow" id="monthLabel">-</p>
             <h2 id="viewTitle">今月の資金計画</h2>
+          </div>
+          <div class="month-switcher" aria-label="対象月切り替え">
+            <button class="icon-button month-nav-button" id="previousMonthButton" type="button" aria-label="前の月">←</button>
+            <label class="month-jump-field" for="topbarSelectedMonth">
+              <span>対象月</span>
+              <input id="topbarSelectedMonth" type="month" />
+            </label>
+            <button class="icon-button month-nav-button" id="nextMonthButton" type="button" aria-label="次の月">→</button>
           </div>
           <div class="topbar-actions">
             <button class="button secondary hidden" id="copyPreviousMonthButton" type="button">
@@ -2198,6 +2250,9 @@ const elements = {
   emailVerifySignOutButton: document.querySelector("#emailVerifySignOutButton"),
   authMessage: document.querySelector("#authMessage"),
   selectedMonth: document.querySelector("#selectedMonth"),
+  topbarSelectedMonth: document.querySelector("#topbarSelectedMonth"),
+  previousMonthButton: document.querySelector("#previousMonthButton"),
+  nextMonthButton: document.querySelector("#nextMonthButton"),
   targetYear: document.querySelector("#targetYear"),
   monthlyIncome: document.querySelector("#monthlyIncome"),
   accountEmail: document.querySelector("#accountEmail"),
@@ -2534,8 +2589,12 @@ function monthNumberFromValue(value) {
 }
 
 function previousMonthValue(value) {
+  return shiftedMonthValue(value, -1);
+}
+
+function shiftedMonthValue(value, offset) {
   const [year, month] = String(value || currentMonth).split("-").map(Number);
-  const date = new Date((year || today.getFullYear()), (month || today.getMonth() + 1) - 2, 1);
+  const date = new Date((year || today.getFullYear()), (month || today.getMonth() + 1) - 1 + offset, 1);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -2720,6 +2779,7 @@ function render() {
 
   const selectedDate = new Date(`${state.profile.selectedMonth || currentMonth}-01T00:00:00`);
   elements.selectedMonth.value = state.profile.selectedMonth || currentMonth;
+  elements.topbarSelectedMonth.value = state.profile.selectedMonth || currentMonth;
   elements.targetYear.value = state.profile.targetYear || today.getFullYear();
   elements.monthlyIncome.value = state.profile.monthlyIncome || 0;
   elements.monthLabel.textContent = monthFormatter.format(selectedDate);
@@ -3873,6 +3933,15 @@ function switchTab(tab) {
   render();
 }
 
+function setSelectedMonth(value) {
+  state.profile.selectedMonth = value || currentMonth;
+  render();
+}
+
+function moveSelectedMonth(offset) {
+  setSelectedMonth(shiftedMonthValue(state.profile.selectedMonth || currentMonth, offset));
+}
+
 function handleSortModeChange(kind, mode) {
   setSortMode(kind, mode);
   showToast(mode === "manual" ? "手動順に切り替えました。" : "自動ソートに切り替えました。");
@@ -4393,11 +4462,11 @@ elements.signOutButton.addEventListener("click", handleSignOut);
 elements.openSettingsButton.addEventListener("click", () => elements.settingsDialog.showModal());
 elements.closeSettingsDialog.addEventListener("click", () => elements.settingsDialog.close());
 elements.copyPreviousMonthButton.addEventListener("click", copyPreviousMonthPaymentAmounts);
+elements.previousMonthButton.addEventListener("click", () => moveSelectedMonth(-1));
+elements.nextMonthButton.addEventListener("click", () => moveSelectedMonth(1));
 
-elements.selectedMonth.addEventListener("change", (event) => {
-  state.profile.selectedMonth = event.target.value || currentMonth;
-  render();
-});
+elements.selectedMonth.addEventListener("change", (event) => setSelectedMonth(event.target.value));
+elements.topbarSelectedMonth.addEventListener("change", (event) => setSelectedMonth(event.target.value));
 
 elements.targetYear.addEventListener("change", (event) => {
   state.profile.targetYear = Number(event.target.value) || today.getFullYear();
@@ -4484,6 +4553,7 @@ initializeFirebase();
 </script>
   </body>
 </html>
+
 
 
 
