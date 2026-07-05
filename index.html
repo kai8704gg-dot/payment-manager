@@ -957,10 +957,9 @@ td {
           </div>
           <div class="auth-actions">
             <button class="button primary" type="submit">ログイン</button>
-            <button class="button secondary" id="createAccountButton" type="button">新規作成</button>
           </div>
         </form>
-        <p class="auth-help">初回ログイン後、認証アプリの6桁コードを登録するまで家計データは表示されません。</p>
+        <p class="auth-help">家族用アプリです。アカウントは管理者がFirebase Consoleで作成します。</p>
       </section>
 
       <section class="auth-card hidden" id="mfaChallengePanel">
@@ -1274,7 +1273,6 @@ td {
     <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
-  createUserWithEmailAndPassword,
   getAuth,
   getMultiFactorResolver,
   multiFactor,
@@ -1436,7 +1434,6 @@ const elements = {
   signInForm: document.querySelector("#signInForm"),
   authEmail: document.querySelector("#authEmail"),
   authPassword: document.querySelector("#authPassword"),
-  createAccountButton: document.querySelector("#createAccountButton"),
   mfaChallengePanel: document.querySelector("#mfaChallengePanel"),
   mfaChallengeForm: document.querySelector("#mfaChallengeForm"),
   mfaChallengeCode: document.querySelector("#mfaChallengeCode"),
@@ -2331,24 +2328,6 @@ async function handleSignIn(event) {
   }
 }
 
-async function createAccount() {
-  const email = elements.authEmail.value.trim();
-  const password = elements.authPassword.value;
-
-  if (!email || password.length < 6) {
-    setAuthMessage("メールアドレスと6文字以上のパスワードを入力してください。", true);
-    return;
-  }
-
-  try {
-    setAuthMessage("アカウントを作成しています...");
-    await createUserWithEmailAndPassword(auth, email, password);
-    setAuthMessage("アカウントを作成しました。確認メールを開いてからMFAを登録してください。");
-  } catch (error) {
-    setAuthMessage(firebaseErrorMessage(error), true);
-  }
-}
-
 function prepareMfaChallenge(error) {
   pendingResolver = getMultiFactorResolver(auth, error);
   pendingTotpHint = pendingResolver.hints.find(
@@ -2571,7 +2550,6 @@ document.querySelectorAll("[data-open-form]").forEach((button) => {
 });
 
 elements.signInForm.addEventListener("submit", handleSignIn);
-elements.createAccountButton.addEventListener("click", createAccount);
 elements.mfaChallengeForm.addEventListener("submit", resolveMfaChallenge);
 elements.backToSignInButton.addEventListener("click", () => showAuthMode("signin"));
 elements.mfaEnrollForm.addEventListener("submit", completeTotpEnrollment);
