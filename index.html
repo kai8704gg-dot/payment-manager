@@ -636,6 +636,18 @@ td {
   text-align: right;
 }
 
+.amount-stack {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.amount-stack span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .check-wrap {
   display: inline-grid;
   place-items: center;
@@ -647,6 +659,26 @@ td {
   width: 18px;
   min-height: 18px;
   accent-color: var(--teal);
+}
+
+.checkbox-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.checkbox-field input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--teal);
+}
+
+.checkbox-field > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .bucket-grid {
@@ -715,6 +747,14 @@ td {
 .bucket-amount strong {
   font-size: 26px;
   line-height: 1.1;
+}
+
+.bucket-amount small,
+.bonus-line {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .bucket-note {
@@ -998,7 +1038,7 @@ td {
             <input id="mfaEnrollCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required />
           </div>
           <div class="auth-actions">
-            <button class="button primary" type="submit">MFAを有効化</button>
+            <button class="button primary" id="mfaEnrollButton" type="submit">MFAを有効化</button>
             <button class="button subtle" id="mfaSetupSignOutButton" type="button">ログアウト</button>
           </div>
         </form>
@@ -1444,6 +1484,7 @@ const elements = {
   mfaEnrollForm: document.querySelector("#mfaEnrollForm"),
   mfaDisplayName: document.querySelector("#mfaDisplayName"),
   mfaEnrollCode: document.querySelector("#mfaEnrollCode"),
+  mfaEnrollButton: document.querySelector("#mfaEnrollButton"),
   mfaSetupSignOutButton: document.querySelector("#mfaSetupSignOutButton"),
   emailVerifyPanel: document.querySelector("#emailVerifyPanel"),
   reloadUserButton: document.querySelector("#reloadUserButton"),
@@ -1692,17 +1733,27 @@ function normalizeState(input) {
 
   next.payments = next.payments.map((payment) => ({
     id: payment.id || createId(),
-    active: true,
     ...payment,
+    active: payment.active !== false,
+    amountPending: Boolean(payment.amountPending),
+    amountNote: payment.amountNote || "",
   }));
   next.savings = next.savings.map((saving) => ({
     id: saving.id || createId(),
-    type: saving.type || "personal",
     ...saving,
+    type: saving.type || "personal",
+    bonusMonth1: normalizeBonusMonth(saving.bonusMonth1),
+    bonusAmount1: parseAmount(saving.bonusAmount1),
+    bonusMonth2: normalizeBonusMonth(saving.bonusMonth2),
+    bonusAmount2: parseAmount(saving.bonusAmount2),
   }));
   next.nisa = next.nisa.map((item) => ({
     id: item.id || createId(),
     ...item,
+    bonusMonth1: normalizeBonusMonth(item.bonusMonth1),
+    bonusAmount1: parseAmount(item.bonusAmount1),
+    bonusMonth2: normalizeBonusMonth(item.bonusMonth2),
+    bonusAmount2: parseAmount(item.bonusAmount2),
   }));
 
   return next;
@@ -1733,6 +1784,16 @@ function parseAmount(value) {
   return Math.max(0, Math.round(Number(value) || 0));
 }
 
+function normalizeBonusMonth(value) {
+  const month = Number(value) || 0;
+  return month >= 1 && month <= 12 ? month : 0;
+}
+
+function monthNumberFromValue(value) {
+  const month = Number(String(value || "").slice(5, 7));
+  return month >= 1 && month <= 12 ? month : 0;
+}
+
 function selectedMonthStatus() {
   const month = state.profile.selectedMonth || currentMonth;
   const existing = state.monthlyStatus[month] || {};
@@ -1757,8 +1818,50 @@ function activePayments() {
   return state.payments.filter((payment) => payment.active !== false);
 }
 
+function paymentAmountValue(payment) {
+  return parseAmount(payment.amount);
+}
+
+function paymentAmountLabel(payment) {
+  const amount = paymentAmountValue(payment);
+  if (payment.amountPending) {
+    return amount > 0 ? `見込み ${formatYen(amount)}` : "未確定";
+  }
+  return formatYen(amount);
+}
+
+function paymentAmountNote(payment) {
+  if (!payment.amountPending) return "";
+  return payment.amountNote || "金額未確定";
+}
+
 function savingsByType(type) {
   return state.savings.filter((saving) => saving.type === type);
+}
+
+function bonusEntries(item) {
+  return [
+    { month: normalizeBonusMonth(item.bonusMonth1), amount: parseAmount(item.bonusAmount1) },
+    { month: normalizeBonusMonth(item.bonusMonth2), amount: parseAmount(item.bonusAmount2) },
+  ].filter((entry) => entry.month && entry.amount > 0);
+}
+
+function bonusAmountForMonth(item, monthValue) {
+  const selectedMonthNumber = monthNumberFromValue(monthValue);
+  if (!selectedMonthNumber) return 0;
+  return bonusEntries(item)
+    .filter((entry) => entry.month === selectedMonthNumber)
+    .reduce((total, entry) => total + entry.amount, 0);
+}
+
+function scheduledContribution(item, monthValue) {
+  return parseAmount(item.monthlyContribution) + bonusAmountForMonth(item, monthValue);
+}
+
+function bonusPlanText(item) {
+  const entries = bonusEntries(item).sort((a, b) => a.month - b.month);
+  if (!entries.length) return "";
+  return `ボーナス ${entries.map((entry) => `${entry.month}月 ${formatYen(entry.amount)}`).join(" / ")}`;
 }
 
 function paidYearTotal(collectionName, itemId, amountKey, year) {
@@ -1767,7 +1870,7 @@ function paidYearTotal(collectionName, itemId, amountKey, year) {
     const itemList = collectionName === "nisa" ? state.nisa : state.savings;
     const item = itemList.find((entry) => entry.id === itemId);
     if (!monthStatus || !monthStatus[collectionName]?.[itemId] || !item) return total;
-    return total + parseAmount(item[amountKey]);
+    return total + scheduledContribution(item, month);
   }, 0);
 }
 
@@ -1820,9 +1923,10 @@ function getViewTitle() {
 function renderDashboard() {
   const status = selectedMonthStatus();
   const payments = activePayments();
-  const paymentTotal = sum(payments, (payment) => parseAmount(payment.amount));
-  const savingTotal = sum(state.savings, (saving) => parseAmount(saving.monthlyContribution));
-  const nisaTotal = sum(state.nisa, (item) => parseAmount(item.monthlyContribution));
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const paymentTotal = sum(payments, (payment) => paymentAmountValue(payment));
+  const savingTotal = sum(state.savings, (saving) => scheduledContribution(saving, selectedMonth));
+  const nisaTotal = sum(state.nisa, (item) => scheduledContribution(item, selectedMonth));
   const commitments = paymentTotal + savingTotal + nisaTotal;
   const remaining = parseAmount(state.profile.monthlyIncome) - commitments;
   const paidPayments = payments.filter((payment) => status.payments[payment.id]).length;
@@ -1903,7 +2007,10 @@ function renderUpcomingPayments(payments, status) {
             <strong>${escapeHtml(payment.name)}</strong>
             <span>${categoryLabels[payment.category] || "その他"}・毎月${payment.dueDay}日</span>
           </div>
-          <strong>${formatYen(payment.amount)}</strong>
+          <div class="amount-stack">
+            <strong>${paymentAmountLabel(payment)}</strong>
+            ${paymentAmountNote(payment) ? `<span>${escapeHtml(paymentAmountNote(payment))}</span>` : ""}
+          </div>
         </div>
       `,
     )
@@ -1963,7 +2070,12 @@ function renderPayments() {
           <td><strong>${escapeHtml(payment.name)}</strong></td>
           <td>${categoryLabels[payment.category] || "その他"}</td>
           <td>毎月${payment.dueDay}日</td>
-          <td class="amount-cell">${formatYen(payment.amount)}</td>
+          <td class="amount-cell">
+            <div class="amount-stack">
+              <strong>${paymentAmountLabel(payment)}</strong>
+              ${paymentAmountNote(payment) ? `<span>${escapeHtml(paymentAmountNote(payment))}</span>` : ""}
+            </div>
+          </td>
           <td>${escapeHtml(payment.memo || "")}</td>
           <td class="action-cell">
             <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
@@ -1987,6 +2099,11 @@ function renderSavings() {
   elements.savingsGrid.innerHTML = state.savings
     .map((saving) => {
       const yearly = paidYearTotal("savings", saving.id, "monthlyContribution", state.profile.targetYear);
+      const selectedMonth = state.profile.selectedMonth || currentMonth;
+      const monthlyAmount = parseAmount(saving.monthlyContribution);
+      const bonusAmount = bonusAmountForMonth(saving, selectedMonth);
+      const thisMonthAmount = scheduledContribution(saving, selectedMonth);
+      const bonusText = bonusPlanText(saving);
       const percent = saving.annualGoal > 0 ? Math.min(100, Math.round((yearly / saving.annualGoal) * 100)) : 0;
       return `
         <article class="bucket-card">
@@ -1996,8 +2113,10 @@ function renderSavings() {
           </div>
           <div class="bucket-amount">
             <span>今月の積立</span>
-            <strong>${formatYen(saving.monthlyContribution)}</strong>
+            <strong>${formatYen(thisMonthAmount)}</strong>
+            ${bonusAmount > 0 ? `<small>毎月 ${formatYen(monthlyAmount)} + ボーナス ${formatYen(bonusAmount)}</small>` : ""}
           </div>
+          ${bonusText ? `<div class="bonus-line">${escapeHtml(bonusText)}</div>` : ""}
           <div class="progress-track">
             <div class="progress-fill" style="width: ${percent}%; background: ${savingTypeColor(saving.type)}"></div>
           </div>
@@ -2035,6 +2154,11 @@ function renderNisa() {
   elements.nisaGrid.innerHTML = state.nisa
     .map((item) => {
       const yearly = paidYearTotal("nisa", item.id, "monthlyContribution", state.profile.targetYear);
+      const selectedMonth = state.profile.selectedMonth || currentMonth;
+      const monthlyAmount = parseAmount(item.monthlyContribution);
+      const bonusAmount = bonusAmountForMonth(item, selectedMonth);
+      const thisMonthAmount = scheduledContribution(item, selectedMonth);
+      const bonusText = bonusPlanText(item);
       const percent = item.annualGoal > 0 ? Math.min(100, Math.round((yearly / item.annualGoal) * 100)) : 0;
       return `
         <article class="bucket-card">
@@ -2043,9 +2167,11 @@ function renderNisa() {
             <span class="tag nisa">NISA</span>
           </div>
           <div class="bucket-amount">
-            <span>毎月の積立</span>
-            <strong>${formatYen(item.monthlyContribution)}</strong>
+            <span>今月の積立</span>
+            <strong>${formatYen(thisMonthAmount)}</strong>
+            ${bonusAmount > 0 ? `<small>毎月 ${formatYen(monthlyAmount)} + ボーナス ${formatYen(bonusAmount)}</small>` : ""}
           </div>
+          ${bonusText ? `<div class="bonus-line">${escapeHtml(bonusText)}</div>` : ""}
           <div class="progress-track">
             <div class="progress-fill" style="width: ${percent}%; background: var(--rose)"></div>
           </div>
@@ -2087,7 +2213,30 @@ function openForm(kind, id = null) {
   elements.formKicker.textContent = isEdit ? "Edit Item" : "New Item";
   elements.formTitle.textContent = formTitle(kind, isEdit);
   elements.formFields.innerHTML = formFields(kind, item);
+  if (kind === "payment") {
+    bindPaymentAmountPendingField();
+  }
   elements.itemDialog.showModal();
+}
+
+function bindPaymentAmountPendingField() {
+  const pendingInput = elements.itemForm.querySelector("#amountPending");
+  const amountInput = elements.itemForm.querySelector("#amount");
+  const noteInput = elements.itemForm.querySelector("#amountNote");
+  if (!pendingInput || !amountInput) return;
+
+  const sync = () => {
+    const pending = pendingInput.checked;
+    amountInput.required = !pending;
+    amountInput.placeholder = pending ? "未定なら空欄" : "1000";
+    if (noteInput) {
+      noteInput.disabled = !pending;
+      noteInput.placeholder = pending ? "例: 請求確定後に入力" : "金額未確定の時だけ使用";
+    }
+  };
+
+  pendingInput.addEventListener("change", sync);
+  sync();
 }
 
 function formTitle(kind, isEdit) {
@@ -2103,7 +2252,14 @@ function formFields(kind, item) {
   if (kind === "payment") {
     return `
       ${textField("name", "名称", item?.name || "", "例: 家賃")}
-      ${numberField("amount", "金額", item?.amount || "", "1000")}
+      <div class="field-group checkbox-field span-2">
+        <label>
+          <input id="amountPending" name="amountPending" type="checkbox" value="1" ${item?.amountPending ? "checked" : ""} />
+          <span>金額未確定</span>
+        </label>
+        <span>請求額がまだ分からない場合に使います。見込み額を入れるか、0のまま保存できます。</span>
+      </div>
+      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1000", false)}
       ${numberField("dueDay", "支払日", item?.dueDay || 1, "1")}
       <div class="field-group">
         <label for="category">カテゴリ</label>
@@ -2113,6 +2269,7 @@ function formFields(kind, item) {
             .join("")}
         </select>
       </div>
+      ${textField("amountNote", "未確定メモ", item?.amountNote || "", "例: 請求確定後に入力", false)}
       ${memoField(item?.memo || "")}
     `;
   }
@@ -2129,6 +2286,7 @@ function formFields(kind, item) {
         </select>
       </div>
       ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+      ${bonusFields(item)}
       ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
       ${numberField("currentAmount", "現在残高", item?.currentAmount || "", "1000")}
       ${memoField(item?.memo || "")}
@@ -2138,26 +2296,54 @@ function formFields(kind, item) {
   return `
     ${textField("name", "銘柄・目的", item?.name || "", "例: 全世界株式インデックス")}
     ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+    ${bonusFields(item)}
     ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
     ${numberField("currentValue", "評価額", item?.currentValue || "", "1000")}
     ${memoField(item?.memo || "")}
   `;
 }
 
-function textField(name, label, value, placeholder) {
+function bonusFields(item) {
+  return `
+    ${monthSelectField("bonusMonth1", "ボーナス月1", item?.bonusMonth1 || "")}
+    ${numberField("bonusAmount1", "ボーナス月1の追加額", item?.bonusAmount1 || "", "1000", false)}
+    ${monthSelectField("bonusMonth2", "ボーナス月2", item?.bonusMonth2 || "")}
+    ${numberField("bonusAmount2", "ボーナス月2の追加額", item?.bonusAmount2 || "", "1000", false)}
+  `;
+}
+
+function monthSelectField(name, label, value) {
+  const selected = normalizeBonusMonth(value);
+  const options = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    return `<option value="${month}" ${selected === month ? "selected" : ""}>${month}月</option>`;
+  }).join("");
+
   return `
     <div class="field-group">
       <label for="${name}">${label}</label>
-      <input id="${name}" name="${name}" type="text" value="${escapeAttribute(value)}" placeholder="${placeholder}" required />
+      <select id="${name}" name="${name}">
+        <option value="">なし</option>
+        ${options}
+      </select>
     </div>
   `;
 }
 
-function numberField(name, label, value, step) {
+function textField(name, label, value, placeholder, required = true) {
   return `
     <div class="field-group">
       <label for="${name}">${label}</label>
-      <input id="${name}" name="${name}" type="number" min="0" step="${step}" inputmode="numeric" value="${escapeAttribute(value)}" required />
+      <input id="${name}" name="${name}" type="text" value="${escapeAttribute(value)}" placeholder="${placeholder}" ${required ? "required" : ""} />
+    </div>
+  `;
+}
+
+function numberField(name, label, value, step, required = true) {
+  return `
+    <div class="field-group">
+      <label for="${name}">${label}</label>
+      <input id="${name}" name="${name}" type="number" min="0" step="${step}" inputmode="numeric" value="${escapeAttribute(value)}" ${required ? "required" : ""} />
     </div>
   `;
 }
@@ -2192,9 +2378,12 @@ function handleFormSubmit(event) {
 
 function buildItem(kind, formData, current) {
   if (kind === "payment") {
+    const amountPending = formData.get("amountPending") === "1";
     return {
       name: formData.get("name").trim(),
       amount: parseAmount(formData.get("amount")),
+      amountPending,
+      amountNote: amountPending ? formData.get("amountNote").trim() : "",
       dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
       category: formData.get("category"),
       memo: formData.get("memo").trim(),
@@ -2207,6 +2396,10 @@ function buildItem(kind, formData, current) {
       name: formData.get("name").trim(),
       type: formData.get("type"),
       monthlyContribution: parseAmount(formData.get("monthlyContribution")),
+      bonusMonth1: normalizeBonusMonth(formData.get("bonusMonth1")),
+      bonusAmount1: parseAmount(formData.get("bonusAmount1")),
+      bonusMonth2: normalizeBonusMonth(formData.get("bonusMonth2")),
+      bonusAmount2: parseAmount(formData.get("bonusAmount2")),
       annualGoal: parseAmount(formData.get("annualGoal")),
       currentAmount: parseAmount(formData.get("currentAmount")),
       memo: formData.get("memo").trim(),
@@ -2216,6 +2409,10 @@ function buildItem(kind, formData, current) {
   return {
     name: formData.get("name").trim(),
     monthlyContribution: parseAmount(formData.get("monthlyContribution")),
+    bonusMonth1: normalizeBonusMonth(formData.get("bonusMonth1")),
+    bonusAmount1: parseAmount(formData.get("bonusAmount1")),
+    bonusMonth2: normalizeBonusMonth(formData.get("bonusMonth2")),
+    bonusAmount2: parseAmount(formData.get("bonusAmount2")),
     annualGoal: parseAmount(formData.get("annualGoal")),
     currentValue: parseAmount(formData.get("currentValue")),
     memo: formData.get("memo").trim(),
@@ -2371,6 +2568,12 @@ async function resolveMfaChallenge(event) {
 async function beginTotpEnrollment() {
   showAuthMode("setupMfa");
   setAuthMessage("認証アプリの登録準備中...");
+  pendingEnrollmentSecret = null;
+  elements.mfaSecretKey.textContent = "生成中...";
+  elements.mfaTotpUri.value = "";
+  elements.mfaEnrollCode.value = "";
+  elements.mfaEnrollCode.disabled = true;
+  elements.mfaEnrollButton.disabled = true;
 
   try {
     pendingEnrollmentSecret = await TotpMultiFactorGenerator.generateSecret(
@@ -2380,9 +2583,16 @@ async function beginTotpEnrollment() {
     const issuer = "支払いと貯金ノート";
     elements.mfaSecretKey.textContent = pendingEnrollmentSecret.secretKey;
     elements.mfaTotpUri.value = pendingEnrollmentSecret.generateQrCodeUrl(accountName, issuer);
+    elements.mfaEnrollCode.disabled = false;
+    elements.mfaEnrollButton.disabled = false;
     setAuthMessage("秘密鍵を認証アプリに登録して、表示された6桁コードを入力してください。");
   } catch (error) {
-    setAuthMessage(firebaseErrorMessage(error), true);
+    elements.mfaSecretKey.textContent = "秘密鍵を生成できませんでした";
+    elements.mfaTotpUri.value = "";
+    elements.mfaEnrollCode.disabled = true;
+    elements.mfaEnrollButton.disabled = true;
+    setAuthMessage(`TOTP MFAの秘密鍵生成に失敗しました。Firebase側でTOTP MFAが有効化されていない可能性があります。${firebaseErrorMessage(error)}`, true);
+    console.error(error);
   }
 }
 
@@ -2521,6 +2731,7 @@ function firebaseErrorMessage(error) {
     "auth/missing-multi-factor-info": "MFA情報が見つかりません。",
     "auth/operation-not-allowed": "Firebase側でメール/パスワード認証、またはTOTP MFAが有効になっていません。READMEのMFA有効化手順を確認してください。",
     "auth/too-many-requests": "試行回数が多すぎます。少し時間を置いてください。",
+    "auth/unsupported-first-factor": "このログイン方法ではMFAを登録できません。メール/パスワード認証でログインしているか確認してください。",
     "auth/weak-password": "パスワードは6文字以上にしてください。",
     "permission-denied": "Firestoreの権限がありません。ルールとメンバー設定を確認してください。",
   };
