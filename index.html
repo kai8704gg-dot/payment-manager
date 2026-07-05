@@ -269,6 +269,25 @@ code {
   font-weight: 800;
 }
 
+.payment-reset-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.reset-inline-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+
 .settings-panel {
   display: grid;
   gap: 14px;
@@ -739,6 +758,21 @@ td {
 
 .amount-cell,
 .action-cell {
+  text-align: right;
+}
+
+.inline-payment-input {
+  width: 100%;
+  min-width: 120px;
+  min-height: 36px;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inline-payment-input.amount-input {
+  min-width: 104px;
   text-align: right;
 }
 
@@ -1380,6 +1414,13 @@ tr.is-complete td,
     width: 100%;
   }
 
+  .payment-reset-panel,
+  .reset-inline-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
   .metric-card {
     min-height: 118px;
   }
@@ -1657,10 +1698,6 @@ tr.is-complete td,
             <button class="icon-button month-nav-button" id="nextMonthButton" type="button" aria-label="次の月">→</button>
           </div>
           <div class="topbar-actions">
-            <button class="button secondary hidden" id="copyPreviousMonthButton" type="button">
-              <span aria-hidden="true">←</span>
-              <span>支払いを先月からコピー</span>
-            </button>
             <button class="button primary hidden" id="contextAddButton" type="button" data-open-form="">
               <span aria-hidden="true">＋</span>
               <span id="contextAddLabel">追加</span>
@@ -1810,6 +1847,30 @@ tr.is-complete td,
                   </select>
                 </label>
                 <span class="pill" id="paymentsCount">0件</span>
+              </div>
+            </div>
+            <div class="payment-reset-panel" aria-label="支払い内容リセット">
+              <button class="button secondary" id="resetPaymentCurrentMonthButton" type="button">
+                <span aria-hidden="true">↺</span>
+                <span>この月の支払い内容をリセット</span>
+              </button>
+              <div class="reset-inline-group">
+                <label class="sort-field" for="paymentResetYear">
+                  <span>年指定</span>
+                  <input id="paymentResetYear" type="number" min="2000" max="2100" />
+                </label>
+                <button class="button secondary" id="resetPaymentYearButton" type="button">年をリセット</button>
+              </div>
+              <div class="reset-inline-group">
+                <label class="sort-field" for="paymentResetStartMonth">
+                  <span>開始月</span>
+                  <input id="paymentResetStartMonth" type="month" />
+                </label>
+                <label class="sort-field" for="paymentResetEndMonth">
+                  <span>終了月</span>
+                  <input id="paymentResetEndMonth" type="month" />
+                </label>
+                <button class="button secondary" id="resetPaymentRangeButton" type="button">範囲をリセット</button>
               </div>
             </div>
             <div class="table-wrap">
@@ -2268,7 +2329,6 @@ const elements = {
   openSettingsButton: document.querySelector("#openSettingsButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsDialog: document.querySelector("#closeSettingsDialog"),
-  copyPreviousMonthButton: document.querySelector("#copyPreviousMonthButton"),
   contextAddButton: document.querySelector("#contextAddButton"),
   contextAddLabel: document.querySelector("#contextAddLabel"),
   monthLabel: document.querySelector("#monthLabel"),
@@ -2291,6 +2351,12 @@ const elements = {
   paymentsTable: document.querySelector("#paymentsTable"),
   paymentsCount: document.querySelector("#paymentsCount"),
   paymentSortMode: document.querySelector("#paymentSortMode"),
+  resetPaymentCurrentMonthButton: document.querySelector("#resetPaymentCurrentMonthButton"),
+  paymentResetYear: document.querySelector("#paymentResetYear"),
+  resetPaymentYearButton: document.querySelector("#resetPaymentYearButton"),
+  paymentResetStartMonth: document.querySelector("#paymentResetStartMonth"),
+  paymentResetEndMonth: document.querySelector("#paymentResetEndMonth"),
+  resetPaymentRangeButton: document.querySelector("#resetPaymentRangeButton"),
   savingsGrid: document.querySelector("#savingsGrid"),
   savingsCount: document.querySelector("#savingsCount"),
   savingSortMode: document.querySelector("#savingSortMode"),
@@ -2615,13 +2681,24 @@ function normalizePaymentMonthAmounts(input = {}) {
   return Object.fromEntries(
     Object.entries(input || {}).map(([id, value]) => [
       id,
-      {
-        amount: parseAmount(value?.amount),
-        amountPending: Boolean(value?.amountPending),
-        amountNote: value?.amountNote || "",
-      },
+      normalizePaymentMonthEntry(value),
     ]),
   );
+}
+
+function normalizePaymentMonthEntry(value = {}) {
+  return {
+    amount: value?.amount === "" || value?.amount == null ? "" : parseAmount(value.amount),
+    amountPending: Boolean(value?.amountPending),
+    amountNote: value?.amountNote || "",
+    dueDate: normalizeDateValue(value?.dueDate),
+    memo: value?.memo || "",
+  };
+}
+
+function normalizeDateValue(value) {
+  const text = String(value || "").trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
 }
 
 function selectedMonthStatus() {
@@ -2640,6 +2717,20 @@ function getYearMonths(year) {
   return Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
 }
 
+function getMonthRange(startMonth, endMonth) {
+  if (!startMonth || !endMonth) return [];
+  const months = [];
+  let cursor = startMonth <= endMonth ? startMonth : endMonth;
+  const last = startMonth <= endMonth ? endMonth : startMonth;
+
+  while (cursor <= last) {
+    months.push(cursor);
+    cursor = shiftedMonthValue(cursor, 1);
+  }
+
+  return months;
+}
+
 function sum(list, accessor) {
   return list.reduce((total, item) => total + accessor(item), 0);
 }
@@ -2650,20 +2741,50 @@ function activePayments() {
 
 function paymentMonthData(payment, month = state.profile.selectedMonth || currentMonth) {
   const monthlyData = readMonthStatus(month).paymentAmounts[payment.id];
-  return monthlyData || {
-    amount: parseAmount(payment.amount),
-    amountPending: Boolean(payment.amountPending),
-    amountNote: payment.amountNote || "",
+  return monthlyData
+    ? { ...monthlyData, hasData: true }
+    : {
+        amount: "",
+        amountPending: false,
+        amountNote: "",
+        dueDate: "",
+        memo: "",
+        hasData: false,
+      };
+}
+
+function paymentDueDateLabel(payment, month = state.profile.selectedMonth || currentMonth) {
+  const data = paymentMonthData(payment, month);
+  if (data.dueDate) {
+    return `${monthNumberFromValue(data.dueDate)}月${Number(data.dueDate.slice(8, 10))}日`;
+  }
+  return "支払日未入力";
+}
+
+function paymentMemoValue(payment, month = state.profile.selectedMonth || currentMonth) {
+  return paymentMonthData(payment, month).memo || "";
+}
+
+function monthBounds(month = state.profile.selectedMonth || currentMonth) {
+  const [year, monthNumber] = String(month || currentMonth).split("-").map(Number);
+  const lastDay = new Date(year || today.getFullYear(), monthNumber || today.getMonth() + 1, 0).getDate();
+  return {
+    min: `${month}-01`,
+    max: `${month}-${String(lastDay).padStart(2, "0")}`,
   };
 }
 
 function paymentAmountValue(payment, month = state.profile.selectedMonth || currentMonth) {
-  return parseAmount(paymentMonthData(payment, month).amount);
+  const amount = paymentMonthData(payment, month).amount;
+  return amount === "" ? 0 : parseAmount(amount);
 }
 
 function paymentAmountLabel(payment, month = state.profile.selectedMonth || currentMonth) {
   const data = paymentMonthData(payment, month);
-  const amount = parseAmount(data.amount);
+  const amount = data.amount === "" ? 0 : parseAmount(data.amount);
+  if (!data.hasData || (data.amount === "" && !data.amountPending)) {
+    return "未入力";
+  }
   if (data.amountPending) {
     return amount > 0 ? `見込み ${formatYen(amount)}` : "未確定";
   }
@@ -2679,11 +2800,50 @@ function paymentAmountNote(payment, month = state.profile.selectedMonth || curre
 function setPaymentMonthAmount(month, paymentId, data) {
   const status = state.monthlyStatus[month] || {};
   state.monthlyStatus[month] = normalizeMonthlyStatus(status);
-  state.monthlyStatus[month].paymentAmounts[paymentId] = {
-    amount: parseAmount(data.amount),
-    amountPending: Boolean(data.amountPending),
-    amountNote: data.amountPending ? data.amountNote || "" : "",
-  };
+  state.monthlyStatus[month].paymentAmounts[paymentId] = normalizePaymentMonthEntry({
+    ...state.monthlyStatus[month].paymentAmounts[paymentId],
+    ...data,
+  });
+}
+
+function resetPaymentMonths(months, label) {
+  const uniqueMonths = [...new Set(months.filter(Boolean))];
+  if (!uniqueMonths.length) {
+    showToast("リセット対象がありません。");
+    return;
+  }
+
+  const confirmed = window.confirm(`${label}の支払い内容と完了状態をリセットしますか？`);
+  if (!confirmed) return;
+
+  uniqueMonths.forEach((month) => {
+    const existing = state.monthlyStatus[month] || {};
+    state.monthlyStatus[month] = normalizeMonthlyStatus(existing);
+    state.monthlyStatus[month].paymentAmounts = {};
+    state.monthlyStatus[month].payments = {};
+  });
+  showToast("支払い内容をリセットしました。");
+  render();
+}
+
+function resetCurrentPaymentMonth() {
+  const month = state.profile.selectedMonth || currentMonth;
+  resetPaymentMonths([month], formatMonthValue(month));
+}
+
+function resetPaymentYear() {
+  const year = Number(elements.paymentResetYear.value) || Number(state.profile.targetYear) || today.getFullYear();
+  resetPaymentMonths(getYearMonths(year), `${year}年`);
+}
+
+function resetPaymentRange() {
+  const start = elements.paymentResetStartMonth.value;
+  const end = elements.paymentResetEndMonth.value;
+  if (!start || !end) {
+    showToast("開始月と終了月を選択してください。");
+    return;
+  }
+  resetPaymentMonths(getMonthRange(start, end), `${formatMonthValue(start || end)}〜${formatMonthValue(end || start)}`);
 }
 
 function savingsByType(type) {
@@ -2781,6 +2941,9 @@ function render() {
   elements.selectedMonth.value = state.profile.selectedMonth || currentMonth;
   elements.topbarSelectedMonth.value = state.profile.selectedMonth || currentMonth;
   elements.targetYear.value = state.profile.targetYear || today.getFullYear();
+  elements.paymentResetYear.value = state.profile.targetYear || today.getFullYear();
+  elements.paymentResetStartMonth.value = elements.paymentResetStartMonth.value || state.profile.selectedMonth || currentMonth;
+  elements.paymentResetEndMonth.value = elements.paymentResetEndMonth.value || state.profile.selectedMonth || currentMonth;
   elements.monthlyIncome.value = state.profile.monthlyIncome || 0;
   elements.monthLabel.textContent = monthFormatter.format(selectedDate);
   elements.viewTitle.textContent = getViewTitle();
@@ -2827,7 +2990,6 @@ function renderTopbarActions() {
   const current = addLabels[activeTab];
   if (!elements.contextAddButton || !elements.contextAddLabel) return;
 
-  elements.copyPreviousMonthButton?.classList.toggle("hidden", activeTab !== "payments");
   elements.contextAddButton.classList.toggle("hidden", !current);
   if (!current) return;
   elements.contextAddButton.dataset.openForm = current.kind;
@@ -2947,7 +3109,7 @@ function renderUpcomingPayments(payments, status) {
         <div class="list-item">
           <div class="list-main">
             <strong>${escapeHtml(payment.name)}</strong>
-            <span>${categoryLabels[payment.category] || "その他"}・毎月${payment.dueDay}日</span>
+            <span>${categoryLabels[payment.category] || "その他"}・${paymentDueDateLabel(payment)}</span>
           </div>
           <div class="amount-stack">
             <strong>${paymentAmountLabel(payment)}</strong>
@@ -3003,7 +3165,7 @@ function renderMonthlyStatusOverview() {
       pendingLabel: "未完了",
       items: sortedItems("payment", activePayments()),
       amountLabel: (item) => paymentAmountLabel(item),
-      metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・毎月${item.dueDay}日`,
+      metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・${paymentDueDateLabel(item)}`,
     },
     {
       kind: "saving",
@@ -3097,7 +3259,7 @@ function renderYearlyOverview() {
     kind: "payment",
     months,
     items: payments,
-    metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・毎月${item.dueDay}日`,
+    metaLabel: (item) => categoryLabels[item.category] || "その他",
     amountLabel: (item, month) => paymentAmountLabel(item, month),
     amountValue: (item, month) => paymentAmountValue(item, month),
     statusLabel: (done) => (done ? "完了" : "未完了"),
@@ -3189,6 +3351,9 @@ function renderPayments() {
     .map(
       (payment) => {
         const done = Boolean(status.payments[payment.id]);
+        const selectedMonth = state.profile.selectedMonth || currentMonth;
+        const monthData = paymentMonthData(payment, selectedMonth);
+        const bounds = monthBounds(selectedMonth);
         return `
         <tr class="${done ? "is-complete" : ""}" data-reorder-item="payment" data-id="${payment.id}">
           <td class="status-cell" data-label="状態">
@@ -3197,19 +3362,27 @@ function renderPayments() {
               <span>${done ? "完了済み" : "未完了"}</span>
             </button>
           </td>
-          <td data-label="名称"><strong>${escapeHtml(payment.name)}</strong></td>
-          <td data-label="カテゴリ">${categoryLabels[payment.category] || "その他"}</td>
-          <td data-label="支払日">毎月${payment.dueDay}日</td>
-          <td class="amount-cell" data-label="金額">
-            <div class="amount-stack">
-              <strong>${paymentAmountLabel(payment)}</strong>
-              ${paymentAmountNote(payment) ? `<span>${escapeHtml(paymentAmountNote(payment))}</span>` : ""}
-            </div>
+          <td data-label="名称">
+            <input class="inline-payment-input" type="text" value="${escapeAttribute(payment.name)}" data-payment-field="name" data-id="${payment.id}" aria-label="支払い名称" />
           </td>
-          <td data-label="メモ">${escapeHtml(payment.memo || "")}</td>
+          <td data-label="カテゴリ">
+            <select class="inline-payment-input" data-payment-field="category" data-id="${payment.id}" aria-label="支払いカテゴリ">
+              ${Object.entries(categoryLabels)
+                .map(([value, label]) => `<option value="${value}" ${payment.category === value ? "selected" : ""}>${label}</option>`)
+                .join("")}
+            </select>
+          </td>
+          <td data-label="支払日">
+            <input class="inline-payment-input" type="date" min="${bounds.min}" max="${bounds.max}" value="${escapeAttribute(monthData.dueDate)}" data-payment-month-field="dueDate" data-id="${payment.id}" aria-label="支払日" />
+          </td>
+          <td class="amount-cell" data-label="金額">
+            <input class="inline-payment-input amount-input" type="number" min="0" step="1" inputmode="numeric" value="${escapeAttribute(monthData.amount)}" placeholder="未入力" data-payment-month-field="amount" data-id="${payment.id}" aria-label="金額" />
+          </td>
+          <td data-label="メモ">
+            <input class="inline-payment-input" type="text" value="${escapeAttribute(monthData.memo)}" placeholder="任意" data-payment-month-field="memo" data-id="${payment.id}" aria-label="メモ" />
+          </td>
           <td class="action-cell" data-label="">
-            <button class="small-button" type="button" data-copy-payment-amount="${payment.id}">先月金額</button>
-            <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
+            <button class="small-button" type="button" data-copy-payment-content="${payment.id}">前月内容コピー</button>
             <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
           </td>
         </tr>
@@ -3550,6 +3723,8 @@ function buildItem(kind, formData, current) {
         amount: parseAmount(formData.get("amount")),
         amountPending,
         amountNote: amountPending ? formData.get("amountNote").trim() : "",
+        dueDate: dueDateFromDay(formData.get("dueDay")),
+        memo: formData.get("memo").trim(),
       },
     };
   }
@@ -3624,6 +3799,49 @@ function deleteItem(kind, id) {
     }
   });
   showToast("削除しました。");
+  render();
+}
+
+function updatePaymentField(id, field, value) {
+  const payment = state.payments.find((item) => item.id === id);
+  if (!payment) return;
+
+  if (field === "name") {
+    payment.name = String(value || "").trim() || payment.name;
+  } else if (field === "category") {
+    payment.category = categoryLabels[value] ? value : "other";
+  }
+  payment.updatedAt = Date.now();
+  showToast("支払い項目を更新しました。");
+  render();
+}
+
+function updatePaymentMonthField(id, field, value) {
+  const payment = state.payments.find((item) => item.id === id);
+  if (!payment) return;
+
+  const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const currentData = paymentMonthData(payment, selectedMonth);
+  const nextData = {
+    amount: currentData.amount,
+    amountPending: currentData.amountPending,
+    amountNote: currentData.amountNote,
+    dueDate: currentData.dueDate,
+    memo: currentData.memo,
+  };
+
+  if (field === "amount") {
+    nextData.amount = String(value || "").trim() === "" ? "" : parseAmount(value);
+    nextData.amountPending = false;
+    nextData.amountNote = "";
+  } else if (field === "dueDate") {
+    nextData.dueDate = normalizeDateValue(value);
+  } else if (field === "memo") {
+    nextData.memo = String(value || "").trim();
+  }
+
+  setPaymentMonthAmount(selectedMonth, id, nextData);
+  showToast("対象月の支払い内容を更新しました。");
   render();
 }
 
@@ -3891,37 +4109,38 @@ function toggleStatus(kind, id, checked = null) {
   render();
 }
 
-function copyPaymentAmountFromPreviousMonth(paymentId) {
+function shiftPaymentDueDateToMonth(dueDate, targetMonth) {
+  if (!dueDate) return "";
+  const day = Number(String(dueDate).slice(8, 10)) || 1;
+  const bounds = monthBounds(targetMonth);
+  const maxDay = Number(bounds.max.slice(8, 10));
+  return `${targetMonth}-${String(Math.min(day, maxDay)).padStart(2, "0")}`;
+}
+
+function dueDateFromDay(day, month = state.profile.selectedMonth || currentMonth) {
+  const numericDay = Math.min(31, Math.max(1, Number(day) || 1));
+  const bounds = monthBounds(month);
+  const maxDay = Number(bounds.max.slice(8, 10));
+  return `${month}-${String(Math.min(numericDay, maxDay)).padStart(2, "0")}`;
+}
+
+function copyPaymentContentFromPreviousMonth(paymentId) {
   const selectedMonth = state.profile.selectedMonth || currentMonth;
   const previousMonth = previousMonthValue(selectedMonth);
   const payment = state.payments.find((item) => item.id === paymentId);
   if (!payment) return;
 
   const previousData = paymentMonthData(payment, previousMonth);
-  setPaymentMonthAmount(selectedMonth, payment.id, previousData);
-  showToast(`${payment.name}の金額を${formatMonthValue(previousMonth)}からコピーしました。`);
-  render();
-}
-
-function copyPreviousMonthPaymentAmounts() {
-  const selectedMonth = state.profile.selectedMonth || currentMonth;
-  const previousMonth = previousMonthValue(selectedMonth);
-  const payments = activePayments();
-
-  if (!payments.length) {
-    showToast("コピーできる支払い項目がありません。");
+  if (!previousData.hasData) {
+    showToast(`${payment.name}の前月内容がありません。`);
     return;
   }
 
-  const confirmed = window.confirm(
-    `${formatMonthValue(previousMonth)}の支払い金額を${formatMonthValue(selectedMonth)}へコピーしますか？`,
-  );
-  if (!confirmed) return;
-
-  payments.forEach((payment) => {
-    setPaymentMonthAmount(selectedMonth, payment.id, paymentMonthData(payment, previousMonth));
+  setPaymentMonthAmount(selectedMonth, payment.id, {
+    ...previousData,
+    dueDate: shiftPaymentDueDateToMonth(previousData.dueDate, selectedMonth),
   });
-  showToast("支払い金額を前月からコピーしました。");
+  showToast(`${payment.name}の前月内容をコピーしました。`);
   render();
 }
 
@@ -4461,9 +4680,11 @@ elements.passwordResetButton.addEventListener("click", handlePasswordReset);
 elements.signOutButton.addEventListener("click", handleSignOut);
 elements.openSettingsButton.addEventListener("click", () => elements.settingsDialog.showModal());
 elements.closeSettingsDialog.addEventListener("click", () => elements.settingsDialog.close());
-elements.copyPreviousMonthButton.addEventListener("click", copyPreviousMonthPaymentAmounts);
 elements.previousMonthButton.addEventListener("click", () => moveSelectedMonth(-1));
 elements.nextMonthButton.addEventListener("click", () => moveSelectedMonth(1));
+elements.resetPaymentCurrentMonthButton.addEventListener("click", resetCurrentPaymentMonth);
+elements.resetPaymentYearButton.addEventListener("click", resetPaymentYear);
+elements.resetPaymentRangeButton.addEventListener("click", resetPaymentRange);
 
 elements.selectedMonth.addEventListener("change", (event) => setSelectedMonth(event.target.value));
 elements.topbarSelectedMonth.addEventListener("change", (event) => setSelectedMonth(event.target.value));
@@ -4504,9 +4725,9 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const copyPaymentButton = event.target.closest("[data-copy-payment-amount]");
+  const copyPaymentButton = event.target.closest("[data-copy-payment-content]");
   if (copyPaymentButton) {
-    copyPaymentAmountFromPreviousMonth(copyPaymentButton.dataset.copyPaymentAmount);
+    copyPaymentContentFromPreviousMonth(copyPaymentButton.dataset.copyPaymentContent);
     return;
   }
 
@@ -4533,6 +4754,17 @@ document.addEventListener("change", (event) => {
   if (statusInput) {
     toggleStatus(statusInput.dataset.status, statusInput.dataset.id, statusInput.checked);
   }
+
+  const paymentField = event.target.closest("[data-payment-field]");
+  if (paymentField) {
+    updatePaymentField(paymentField.dataset.id, paymentField.dataset.paymentField, paymentField.value);
+    return;
+  }
+
+  const paymentMonthField = event.target.closest("[data-payment-month-field]");
+  if (paymentMonthField) {
+    updatePaymentMonthField(paymentMonthField.dataset.id, paymentMonthField.dataset.paymentMonthField, paymentMonthField.value);
+  }
 });
 
 elements.itemForm.addEventListener("submit", handleFormSubmit);
@@ -4553,6 +4785,7 @@ initializeFirebase();
 </script>
   </body>
 </html>
+
 
 
 
