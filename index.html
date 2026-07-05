@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
@@ -1308,7 +1308,7 @@ tr.is-dragging td {
           </div>
           <div class="field-group">
             <label for="monthlyIncome">毎月の手取り目安</label>
-            <input id="monthlyIncome" type="number" min="0" step="1000" inputmode="numeric" />
+            <input id="monthlyIncome" type="number" min="0" step="1" inputmode="numeric" />
           </div>
         </section>
 
@@ -2577,7 +2577,7 @@ function bindPaymentAmountPendingField() {
   const sync = () => {
     const pending = pendingInput.checked;
     amountInput.required = !pending;
-    amountInput.placeholder = pending ? "未定なら空欄" : "1000";
+    amountInput.placeholder = pending ? "未定なら空欄" : "1234";
     if (noteInput) {
       noteInput.disabled = !pending;
       noteInput.placeholder = pending ? "例: 請求確定後に入力" : "金額未確定の時だけ使用";
@@ -2608,7 +2608,7 @@ function formFields(kind, item) {
         </label>
         <span>請求額がまだ分からない場合に使います。見込み額を入れるか、0のまま保存できます。</span>
       </div>
-      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1000", false)}
+      ${numberField("amount", "金額または見込み額", item?.amount ?? "", "1", false)}
       ${numberField("dueDay", "支払日", item?.dueDay || 1, "1")}
       <div class="field-group">
         <label for="category">カテゴリ</label>
@@ -2634,20 +2634,20 @@ function formFields(kind, item) {
             .join("")}
         </select>
       </div>
-      ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+      ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1")}
       ${bonusFields(item)}
-      ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
-      ${numberField("currentAmount", "現在残高", item?.currentAmount || "", "1000")}
+      ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1")}
+      ${numberField("currentAmount", "現在残高", item?.currentAmount || "", "1")}
       ${memoField(item?.memo || "")}
     `;
   }
 
   return `
     ${textField("name", "銘柄・目的", item?.name || "", "例: 全世界株式インデックス")}
-    ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1000")}
+    ${numberField("monthlyContribution", "毎月の積立額", item?.monthlyContribution || "", "1")}
     ${bonusFields(item)}
-    ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1000")}
-    ${numberField("currentValue", "評価額", item?.currentValue || "", "1000")}
+    ${numberField("annualGoal", "年間目標額", item?.annualGoal || "", "1")}
+    ${numberField("currentValue", "評価額", item?.currentValue || "", "1")}
     ${memoField(item?.memo || "")}
   `;
 }
@@ -2655,9 +2655,9 @@ function formFields(kind, item) {
 function bonusFields(item) {
   return `
     ${monthSelectField("bonusMonth1", "ボーナス月1", item?.bonusMonth1 || "")}
-    ${numberField("bonusAmount1", "ボーナス月1の追加額", item?.bonusAmount1 || "", "1000", false)}
+    ${numberField("bonusAmount1", "ボーナス月1の追加額", item?.bonusAmount1 || "", "1", false)}
     ${monthSelectField("bonusMonth2", "ボーナス月2", item?.bonusMonth2 || "")}
-    ${numberField("bonusAmount2", "ボーナス月2の追加額", item?.bonusAmount2 || "", "1000", false)}
+    ${numberField("bonusAmount2", "ボーナス月2の追加額", item?.bonusAmount2 || "", "1", false)}
   `;
 }
 
@@ -3451,6 +3451,8 @@ document.querySelector("#resetButton").addEventListener("click", resetData);
 
 initializeFirebase();
 
-    </script>
+</script>
   </body>
 </html>
+
+
