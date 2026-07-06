@@ -332,53 +332,62 @@ code {
   font-weight: 600;
 }
 
-.payment-reset-panel {
+.reset-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface-raised);
-  margin-bottom: 16px;
+  padding: 12px 14px;
 }
 
-.payment-reset-panel summary {
+.reset-option-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reset-option-main strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.reset-option-main span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reset-option-controls {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 11px 14px;
-  color: var(--muted);
+}
+
+.reset-option-controls input {
+  width: auto;
+  min-width: 118px;
+  min-height: 38px;
   font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  user-select: none;
-  list-style: none;
 }
 
-.payment-reset-panel summary::-webkit-details-marker {
-  display: none;
-}
-
-.payment-reset-panel summary::before {
-  content: "▸";
+.reset-range-separator {
   color: var(--faint);
-  transition: transform 0.15s ease;
+  flex: 0 0 auto;
 }
 
-.payment-reset-panel[open] summary::before {
-  transform: rotate(90deg);
+.button.danger {
+  color: var(--rose);
 }
 
-.reset-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 10px;
-  padding: 2px 14px 14px;
-}
-
-.reset-inline-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 8px;
+.button.danger:hover {
+  border-color: var(--rose);
+  background: #fae6ee;
+  color: var(--rose);
 }
 
 .account-panel {
@@ -1289,6 +1298,16 @@ tr.is-complete td,
   background: var(--surface-raised);
 }
 
+.year-totals-row th,
+.year-totals-row td {
+  border-top: 2px solid var(--line-strong);
+  background: var(--surface-muted);
+}
+
+.year-totals-row .year-item-head {
+  background: var(--surface-muted);
+}
+
 .check-wrap {
   display: inline-grid;
   place-items: center;
@@ -1734,11 +1753,18 @@ tr.is-complete td,
     width: 100%;
   }
 
-  .reset-body,
-  .reset-inline-group {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
+  .reset-option {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reset-option-controls {
+    justify-content: stretch;
+  }
+
+  .reset-option-controls input,
+  .reset-option-controls .button {
+    flex: 1 1 auto;
   }
 
   .inline-payment-input {
@@ -2163,33 +2189,6 @@ tr.is-complete td,
                 <span class="pill" id="paymentsCount">0件</span>
               </div>
             </div>
-            <details class="payment-reset-panel" aria-label="支払い内容リセット">
-              <summary>まとめてリセット(この月・年・期間)</summary>
-              <div class="reset-body">
-                <button class="button secondary" id="resetPaymentCurrentMonthButton" type="button">
-                  <span aria-hidden="true">↺</span>
-                  <span>この月の支払い内容をリセット</span>
-                </button>
-                <div class="reset-inline-group">
-                  <label class="sort-field" for="paymentResetYear">
-                    <span>年指定</span>
-                    <input id="paymentResetYear" type="number" min="2000" max="2100" />
-                  </label>
-                  <button class="button secondary" id="resetPaymentYearButton" type="button">年をリセット</button>
-                </div>
-                <div class="reset-inline-group">
-                  <label class="sort-field" for="paymentResetStartMonth">
-                    <span>開始月</span>
-                    <input id="paymentResetStartMonth" type="month" />
-                  </label>
-                  <label class="sort-field" for="paymentResetEndMonth">
-                    <span>終了月</span>
-                    <input id="paymentResetEndMonth" type="month" />
-                  </label>
-                  <button class="button secondary" id="resetPaymentRangeButton" type="button">範囲をリセット</button>
-                </div>
-              </div>
-            </details>
             <div class="table-wrap">
               <table>
                 <thead>
@@ -2397,6 +2396,44 @@ tr.is-complete td,
                 <span>NISA CSV読込</span>
                 <input type="file" accept=".csv,text/csv" data-import-csv="nisa" />
               </label>
+            </div>
+          </section>
+
+          <section class="settings-section" aria-label="支払いデータのリセット">
+            <div class="section-heading">
+              <h4>支払いデータのリセット</h4>
+              <span>入力した金額・支払日・完了状態を消します</span>
+            </div>
+            <div class="reset-option">
+              <div class="reset-option-main">
+                <strong>表示中の月をリセット</strong>
+                <span>いま選択している対象月の入力をまとめて消します</span>
+              </div>
+              <div class="reset-option-controls">
+                <button class="button secondary danger" id="resetPaymentCurrentMonthButton" type="button">リセット</button>
+              </div>
+            </div>
+            <div class="reset-option">
+              <div class="reset-option-main">
+                <strong>年ごとリセット</strong>
+                <span>指定した年の1月〜12月をまとめて消します</span>
+              </div>
+              <div class="reset-option-controls">
+                <input id="paymentResetYear" type="number" min="2000" max="2100" aria-label="対象の年" />
+                <button class="button secondary danger" id="resetPaymentYearButton" type="button">リセット</button>
+              </div>
+            </div>
+            <div class="reset-option">
+              <div class="reset-option-main">
+                <strong>期間を指定してリセット</strong>
+                <span>開始月から終了月までをまとめて消します</span>
+              </div>
+              <div class="reset-option-controls">
+                <input id="paymentResetStartMonth" type="month" aria-label="開始月" />
+                <span class="reset-range-separator">〜</span>
+                <input id="paymentResetEndMonth" type="month" aria-label="終了月" />
+                <button class="button secondary danger" id="resetPaymentRangeButton" type="button">リセット</button>
+              </div>
             </div>
           </section>
         </div>
@@ -3647,6 +3684,7 @@ function renderYearlyOverview() {
     statusLabel: (done) => (done ? "完了" : "未完了"),
     emptyLabel: "支払い項目がありません。",
     activeInMonth: (item, month) => paymentActiveInMonth(item, month),
+    showColumnTotals: true,
   });
 
   elements.yearlySavingsTable.innerHTML = yearlyTableHtml({
@@ -3672,7 +3710,7 @@ function renderYearlyOverview() {
   });
 }
 
-function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountValue, statusLabel, emptyLabel, activeInMonth = () => true }) {
+function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountValue, statusLabel, emptyLabel, activeInMonth = () => true, showColumnTotals = false }) {
   const monthHeaders = months.map((month) => `<th>${monthNumberFromValue(month)}月</th>`).join("");
   const colspan = months.length + 2;
 
@@ -3724,6 +3762,26 @@ function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountVa
         </tr>
       </thead>
       <tbody>${rows}</tbody>
+      ${
+        showColumnTotals && items.length
+          ? `
+      <tfoot>
+        <tr class="year-totals-row">
+          <th class="year-item-head"><strong>月合計</strong></th>
+          ${months
+            .map((month) => {
+              const columnTotal = sum(items, (item) => (activeInMonth(item, month) ? amountValue(item, month) : 0));
+              return `<td class="year-total-cell"><strong>${formatYen(columnTotal)}</strong></td>`;
+            })
+            .join("")}
+          <td class="year-total-cell"><strong>${formatYen(
+            sum(items, (item) => sum(months, (month) => (activeInMonth(item, month) ? amountValue(item, month) : 0))),
+          )}</strong></td>
+        </tr>
+      </tfoot>
+      `
+          : ""
+      }
     </table>
   `;
 }
