@@ -1510,7 +1510,10 @@ tr.is-complete td,
   position: fixed;
   right: 18px;
   bottom: 18px;
-  max-width: min(420px, calc(100vw - 36px));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(460px, calc(100vw - 36px));
   transform: translateY(20px);
   opacity: 0;
   pointer-events: none;
@@ -1530,6 +1533,34 @@ tr.is-complete td,
 .toast.show {
   transform: translateY(0);
   opacity: 1;
+  pointer-events: auto;
+}
+
+.toast-action {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #7ee2b8;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.delete-item-button {
+  margin-right: auto;
+  color: var(--rose);
+}
+
+.delete-item-button:hover {
+  border-color: var(--rose);
+  background: #fae6ee;
+  color: var(--rose);
 }
 
 .empty-state {
@@ -2239,6 +2270,7 @@ tr.is-complete td,
         </div>
         <div class="form-grid" id="formFields"></div>
         <div class="form-actions">
+          <button class="button subtle delete-item-button hidden" type="button" id="deleteItemButton">この項目を削除</button>
           <button class="button subtle" type="button" id="cancelForm">キャンセル</button>
           <button class="button primary" type="submit">保存</button>
         </div>
@@ -3757,7 +3789,7 @@ function renderPayments() {
           <td class="action-cell" data-label="">
             <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
             <button class="small-button" type="button" data-copy-payment-content="${payment.id}">前月内容コピー</button>
-            <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
+            <button class="small-button" type="button" data-clear-payment-month="${payment.id}">入力クリア</button>
           </td>
         </tr>
       `;
@@ -3818,7 +3850,6 @@ function renderSavings() {
               <span>${done ? "入金済み" : "未入金"}</span>
             </button>
             <button class="small-button" type="button" data-edit="saving" data-id="${saving.id}">編集</button>
-            <button class="small-button danger" type="button" data-delete="saving" data-id="${saving.id}">削除</button>
           </div>
         </article>
       `;
@@ -3878,7 +3909,6 @@ function renderNisa() {
               <span>${done ? "実行済み" : "未実行"}</span>
             </button>
             <button class="small-button" type="button" data-edit="nisa" data-id="${item.id}">編集</button>
-            <button class="small-button danger" type="button" data-delete="nisa" data-id="${item.id}">削除</button>
           </div>
         </article>
       `;
@@ -3902,6 +3932,7 @@ function openForm(kind, id = null) {
   elements.formKicker.textContent = isEdit ? "Edit Item" : "New Item";
   elements.formTitle.textContent = formTitle(kind, isEdit);
   elements.formFields.innerHTML = formFields(kind, item);
+  document.querySelector("#deleteItemButton").classList.toggle("hidden", !isEdit);
   if (kind === "payment") {
     bindPaymentAmountPendingField();
   }
@@ -4171,24 +4202,91 @@ function statusKey(kind) {
   }[kind];
 }
 
+let pendingUndo = null;
+
 function deleteItem(kind, id) {
   const collection = getCollection(kind);
-  const item = collection.find((entry) => entry.id === id);
+  const index = collection.findIndex((entry) => entry.id === id);
+  const item = index >= 0 ? collection[index] : null;
   if (!item) return;
 
   const confirmed = window.confirm(`${item.name}を削除しますか？`);
   if (!confirmed) return;
 
-  const index = collection.findIndex((entry) => entry.id === id);
+  const key = statusKey(kind);
+  const statusBackup = [];
+  Object.entries(state.monthlyStatus).forEach(([month, monthStatus]) => {
+    const done = monthStatus[key]?.[id];
+    const paymentMonth = kind === "payment" ? monthStatus.paymentAmounts?.[id] : undefined;
+    if (done !== undefined || paymentMonth !== undefined) {
+      statusBackup.push({ month, done, paymentMonth });
+    }
+  });
+
   collection.splice(index, 1);
   Object.values(state.monthlyStatus).forEach((monthStatus) => {
-    const key = statusKey(kind);
     delete monthStatus[key]?.[id];
     if (kind === "payment") {
       delete monthStatus.paymentAmounts?.[id];
     }
   });
-  showToast("削除しました。");
+
+  pendingUndo = { kind, item, index, statusBackup };
+  showToast(`「${item.name}」を削除しました。`, { actionLabel: "元に戻す", onAction: restoreLastDeleted });
+  render();
+}
+
+function restoreLastDeleted() {
+  if (!pendingUndo) return;
+  const { kind, item, index, statusBackup } = pendingUndo;
+  pendingUndo = null;
+
+  const collection = getCollection(kind);
+  if (collection.some((entry) => entry.id === item.id)) return;
+
+  collection.splice(Math.min(index, collection.length), 0, item);
+  const key = statusKey(kind);
+  statusBackup.forEach(({ month, done, paymentMonth }) => {
+    state.monthlyStatus[month] = normalizeMonthlyStatus(state.monthlyStatus[month] || {});
+    if (done !== undefined) {
+      state.monthlyStatus[month][key][item.id] = done;
+    }
+    if (kind === "payment" && paymentMonth !== undefined) {
+      state.monthlyStatus[month].paymentAmounts[item.id] = paymentMonth;
+    }
+  });
+
+  showToast(`「${item.name}」を元に戻しました。`);
+  render();
+}
+
+function clearPaymentMonthInputs(id) {
+  const payment = state.payments.find((item) => item.id === id);
+  if (!payment) return;
+
+  const month = state.profile.selectedMonth || currentMonth;
+  const existing = state.monthlyStatus[month]?.paymentAmounts?.[id];
+  if (!existing) {
+    showToast("この月の入力はまだありません。");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `${payment.name}の${formatMonthValue(month)}分の入力(金額・支払日・メモ)をクリアしますか？項目そのものは残ります。`,
+  );
+  if (!confirmed) return;
+
+  const backup = { ...existing };
+  delete state.monthlyStatus[month].paymentAmounts[id];
+  showToast(`${formatMonthValue(month)}分の入力をクリアしました。`, {
+    actionLabel: "元に戻す",
+    onAction: () => {
+      state.monthlyStatus[month] = normalizeMonthlyStatus(state.monthlyStatus[month] || {});
+      state.monthlyStatus[month].paymentAmounts[id] = backup;
+      showToast("入力を元に戻しました。");
+      render();
+    },
+  });
   render();
 }
 
@@ -5015,13 +5113,32 @@ function setAuthMessage(message, isError = false) {
   elements.authMessage.classList.toggle("error", isError);
 }
 
-function showToast(message) {
+function showToast(message, options = {}) {
+  const { actionLabel, onAction } = options;
   window.clearTimeout(toastTimer);
-  elements.toast.textContent = message;
+  elements.toast.textContent = "";
+
+  const text = document.createElement("span");
+  text.textContent = message;
+  elements.toast.append(text);
+
+  if (actionLabel && typeof onAction === "function") {
+    const actionButton = document.createElement("button");
+    actionButton.type = "button";
+    actionButton.className = "toast-action";
+    actionButton.textContent = actionLabel;
+    actionButton.addEventListener("click", () => {
+      window.clearTimeout(toastTimer);
+      elements.toast.classList.remove("show");
+      onAction();
+    });
+    elements.toast.append(actionButton);
+  }
+
   elements.toast.classList.add("show");
   toastTimer = window.setTimeout(() => {
     elements.toast.classList.remove("show");
-  }, 2200);
+  }, actionLabel ? 8000 : 2200);
 }
 
 function firebaseErrorMessage(error) {
@@ -5129,6 +5246,12 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const clearPaymentMonthButton = event.target.closest("[data-clear-payment-month]");
+  if (clearPaymentMonthButton) {
+    clearPaymentMonthInputs(clearPaymentMonthButton.dataset.clearPaymentMonth);
+    return;
+  }
+
   const deleteButton = event.target.closest("[data-delete]");
   if (deleteButton) {
     deleteItem(deleteButton.dataset.delete, deleteButton.dataset.id);
@@ -5162,6 +5285,12 @@ document.addEventListener("change", (event) => {
 elements.itemForm.addEventListener("submit", handleFormSubmit);
 document.querySelector("#closeDialog").addEventListener("click", () => elements.itemDialog.close());
 document.querySelector("#cancelForm").addEventListener("click", () => elements.itemDialog.close());
+document.querySelector("#deleteItemButton").addEventListener("click", () => {
+  if (!editing.id) return;
+  const { kind, id } = editing;
+  elements.itemDialog.close();
+  deleteItem(kind, id);
+});
 document.querySelectorAll("[data-export-csv]").forEach((button) => {
   button.addEventListener("click", () => exportCsv(button.dataset.exportCsv));
 });
