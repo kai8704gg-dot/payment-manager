@@ -947,6 +947,25 @@ tbody tr:hover .inline-payment-input {
   text-align: right;
 }
 
+.due-date-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.due-date-cell input {
+  min-width: 130px;
+}
+
+.due-weekday {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .reorder-cell {
   display: flex;
   align-items: center;
@@ -1250,6 +1269,16 @@ tr.is-complete td,
 
 .year-cell.done {
   background: #eef8f1;
+}
+
+.year-cell.inactive {
+  background: var(--surface-muted);
+  color: var(--faint);
+}
+
+.year-cell.inactive strong,
+.year-cell.inactive span {
+  color: var(--faint);
 }
 
 .year-cell.pending {
@@ -2423,6 +2452,8 @@ const csvSchemas = {
       ["amountNote", "未確定メモ"],
       ["dueDay", "支払日"],
       ["category", "カテゴリ"],
+      ["startMonth", "開始月"],
+      ["endMonth", "終了月"],
       ["memo", "メモ"],
       ["active", "有効"],
     ],
@@ -2866,6 +2897,8 @@ function normalizeState(input) {
     id: payment.id || createId(),
     ...payment,
     active: payment.active !== false,
+    startMonth: normalizeMonthValue(payment.startMonth),
+    endMonth: normalizeMonthValue(payment.endMonth),
     amountPending: Boolean(payment.amountPending),
     amountNote: payment.amountNote || "",
     createdAt: Number(payment.createdAt) || Number(payment.updatedAt) || initialTimestamp,
@@ -2978,6 +3011,38 @@ function normalizeDateValue(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : "";
 }
 
+function normalizeMonthValue(value) {
+  const text = String(value || "").trim();
+  return /^\d{4}-\d{2}$/.test(text) ? text : "";
+}
+
+const weekdayNames = ["日", "月", "火", "水", "木", "金", "土"];
+
+function weekdayLabelFromDate(value) {
+  const text = normalizeDateValue(value);
+  if (!text) return "";
+  const date = new Date(`${text}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? "" : weekdayNames[date.getDay()];
+}
+
+function paymentActiveInMonth(payment, month = state.profile.selectedMonth || currentMonth) {
+  if (payment.startMonth && month < payment.startMonth) return false;
+  if (payment.endMonth && month > payment.endMonth) return false;
+  return true;
+}
+
+function paymentsForMonth(month = state.profile.selectedMonth || currentMonth) {
+  return activePayments().filter((payment) => paymentActiveInMonth(payment, month));
+}
+
+function paymentPeriodLabel(payment) {
+  if (!payment.startMonth && !payment.endMonth) return "";
+  const from = payment.startMonth ? formatMonthValue(payment.startMonth) : "";
+  const to = payment.endMonth ? formatMonthValue(payment.endMonth) : "";
+  if (from && to) return `${from}〜${to}`;
+  return from ? `${from}〜` : `〜${to}`;
+}
+
 function selectedMonthStatus() {
   const month = state.profile.selectedMonth || currentMonth;
   const existing = state.monthlyStatus[month] || {};
@@ -3033,7 +3098,8 @@ function paymentMonthData(payment, month = state.profile.selectedMonth || curren
 function paymentDueDateLabel(payment, month = state.profile.selectedMonth || currentMonth) {
   const data = paymentMonthData(payment, month);
   if (data.dueDate) {
-    return `${monthNumberFromValue(data.dueDate)}月${Number(data.dueDate.slice(8, 10))}日`;
+    const weekday = weekdayLabelFromDate(data.dueDate);
+    return `${monthNumberFromValue(data.dueDate)}月${Number(data.dueDate.slice(8, 10))}日${weekday ? `(${weekday})` : ""}`;
   }
   return "支払日未入力";
 }
@@ -3304,8 +3370,8 @@ function syncNavTabs() {
 
 function renderDashboard() {
   const status = selectedMonthStatus();
-  const payments = sortedItems("payment", activePayments());
   const selectedMonth = state.profile.selectedMonth || currentMonth;
+  const payments = sortedItems("payment", paymentsForMonth(selectedMonth));
   const paymentTotal = sum(payments, (payment) => paymentAmountValue(payment));
   const savingTotal = sum(state.savings, (saving) => scheduledContribution(saving, selectedMonth));
   const nisaTotal = sum(state.nisa, (item) => scheduledContribution(item, selectedMonth));
@@ -3440,7 +3506,7 @@ function renderMonthlyStatusOverview() {
       title: "支払い",
       doneLabel: "完了済み",
       pendingLabel: "未完了",
-      items: sortedItems("payment", activePayments()),
+      items: sortedItems("payment", paymentsForMonth(selectedMonth)),
       amountLabel: (item) => paymentAmountLabel(item),
       metaLabel: (item) => `${categoryLabels[item.category] || "その他"}・${paymentDueDateLabel(item)}`,
     },
@@ -3508,10 +3574,14 @@ function renderYearlyOverview() {
 
   const year = Number(state.profile.targetYear) || today.getFullYear();
   const months = getYearMonths(year);
-  const payments = sortedItems("payment", activePayments());
+  const payments = sortedItems("payment", activePayments()).filter((payment) =>
+    months.some((month) => paymentActiveInMonth(payment, month)),
+  );
   const savings = sortedItems("saving", state.savings);
   const nisaItems = sortedItems("nisa", state.nisa);
-  const paymentTotal = sum(payments, (payment) => sum(months, (month) => paymentAmountValue(payment, month)));
+  const paymentTotal = sum(payments, (payment) =>
+    sum(months, (month) => (paymentActiveInMonth(payment, month) ? paymentAmountValue(payment, month) : 0)),
+  );
   const savingTotal = sum(savings, (saving) => sum(months, (month) => scheduledContribution(saving, month)));
   const nisaTotal = sum(nisaItems, (item) => sum(months, (month) => scheduledContribution(item, month)));
 
@@ -3536,11 +3606,15 @@ function renderYearlyOverview() {
     kind: "payment",
     months,
     items: payments,
-    metaLabel: (item) => categoryLabels[item.category] || "その他",
+    metaLabel: (item) => {
+      const period = paymentPeriodLabel(item);
+      return `${categoryLabels[item.category] || "その他"}${period ? `・${period}` : ""}`;
+    },
     amountLabel: (item, month) => paymentAmountLabel(item, month),
     amountValue: (item, month) => paymentAmountValue(item, month),
     statusLabel: (done) => (done ? "完了" : "未完了"),
     emptyLabel: "支払い項目がありません。",
+    activeInMonth: (item, month) => paymentActiveInMonth(item, month),
   });
 
   elements.yearlySavingsTable.innerHTML = yearlyTableHtml({
@@ -3566,7 +3640,7 @@ function renderYearlyOverview() {
   });
 }
 
-function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountValue, statusLabel, emptyLabel }) {
+function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountValue, statusLabel, emptyLabel, activeInMonth = () => true }) {
   const monthHeaders = months.map((month) => `<th>${monthNumberFromValue(month)}月</th>`).join("");
   const colspan = months.length + 2;
 
@@ -3576,6 +3650,14 @@ function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountVa
           const key = statusKey(kind);
           const cells = months
             .map((month) => {
+              if (!activeInMonth(item, month)) {
+                return `
+                <td class="year-cell inactive">
+                  <strong>-</strong>
+                  <span>対象外</span>
+                </td>
+              `;
+              }
               const done = Boolean(readMonthStatus(month)[key]?.[item.id]);
               return `
                 <td class="year-cell ${done ? "done" : "pending"}">
@@ -3585,7 +3667,7 @@ function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountVa
               `;
             })
             .join("");
-          const total = sum(months, (month) => amountValue(item, month));
+          const total = sum(months, (month) => (activeInMonth(item, month) ? amountValue(item, month) : 0));
           return `
             <tr>
               <th class="year-item-head">
@@ -3616,11 +3698,22 @@ function yearlyTableHtml({ kind, months, items, metaLabel, amountLabel, amountVa
 
 function renderPayments() {
   const status = selectedMonthStatus();
-  const payments = sortedItems("payment", activePayments());
-  elements.paymentsCount.textContent = `${payments.length}件`;
+  const selectedMonthForList = state.profile.selectedMonth || currentMonth;
+  const allActive = activePayments();
+  const payments = sortedItems(
+    "payment",
+    allActive.filter((payment) => paymentActiveInMonth(payment, selectedMonthForList)),
+  );
+  const hiddenCount = allActive.length - payments.length;
+  elements.paymentsCount.textContent =
+    hiddenCount > 0 ? `${payments.length}件(期間外${hiddenCount}件)` : `${payments.length}件`;
 
   if (!payments.length) {
-    elements.paymentsTable.innerHTML = `<tr><td colspan="7"><div class="empty-state">支払い項目がありません。</div></td></tr>`;
+    const emptyMessage =
+      hiddenCount > 0
+        ? `この月に対象の支払いはありません。(期間外${hiddenCount}件は対象月に移動すると表示・編集できます)`
+        : "支払い項目がありません。";
+    elements.paymentsTable.innerHTML = `<tr><td colspan="7"><div class="empty-state">${emptyMessage}</div></td></tr>`;
     return;
   }
 
@@ -3650,7 +3743,10 @@ function renderPayments() {
             </select>
           </td>
           <td data-label="支払日">
-            <input class="inline-payment-input" type="date" min="${bounds.min}" max="${bounds.max}" value="${escapeAttribute(monthData.dueDate)}" data-payment-month-field="dueDate" data-id="${payment.id}" aria-label="支払日" />
+            <div class="due-date-cell">
+              <input class="inline-payment-input" type="date" min="${bounds.min}" max="${bounds.max}" value="${escapeAttribute(monthData.dueDate)}" data-payment-month-field="dueDate" data-id="${payment.id}" aria-label="支払日" />
+              <span class="due-weekday">${weekdayLabelFromDate(monthData.dueDate) ? `(${weekdayLabelFromDate(monthData.dueDate)})` : ""}</span>
+            </div>
           </td>
           <td class="amount-cell" data-label="金額">
             <input class="inline-payment-input amount-input" type="number" min="0" step="1" inputmode="numeric" value="${escapeAttribute(monthData.amount)}" placeholder="未入力" data-payment-month-field="amount" data-id="${payment.id}" aria-label="金額" />
@@ -3659,6 +3755,7 @@ function renderPayments() {
             <input class="inline-payment-input" type="text" value="${escapeAttribute(monthData.memo)}" placeholder="任意" data-payment-month-field="memo" data-id="${payment.id}" aria-label="メモ" />
           </td>
           <td class="action-cell" data-label="">
+            <button class="small-button" type="button" data-edit="payment" data-id="${payment.id}">編集</button>
             <button class="small-button" type="button" data-copy-payment-content="${payment.id}">前月内容コピー</button>
             <button class="small-button danger" type="button" data-delete="payment" data-id="${payment.id}">削除</button>
           </td>
@@ -3865,6 +3962,17 @@ function formFields(kind, item) {
         </select>
       </div>
       ${textField("amountNote", "未確定メモ", monthlyPayment?.amountNote || "", "例: 請求確定後に入力", false)}
+      <div class="field-group">
+        <label for="startMonth">開始月(空欄=最初から)</label>
+        <input id="startMonth" name="startMonth" type="month" value="${escapeAttribute(item?.startMonth || "")}" />
+      </div>
+      <div class="field-group">
+        <label for="endMonth">終了月(空欄=ずっと続く)</label>
+        <input id="endMonth" name="endMonth" type="month" value="${escapeAttribute(item?.endMonth || "")}" />
+      </div>
+      <div class="field-group checkbox-field span-2">
+        <span>例: 2026年6月から始まる支払いは開始月に2026-06、2026年12月で終わる支払いは終了月に2026-12を入れます。期間外の月では一覧や集計に出ません。</span>
+      </div>
       ${memoField(item?.memo || "")}
     `;
   }
@@ -3983,6 +4091,9 @@ function buildItem(kind, formData, current) {
   const timestamp = Date.now();
   if (kind === "payment") {
     const amountPending = formData.get("amountPending") === "1";
+    const startMonthRaw = normalizeMonthValue(formData.get("startMonth"));
+    const endMonthRaw = normalizeMonthValue(formData.get("endMonth"));
+    const reversed = startMonthRaw && endMonthRaw && startMonthRaw > endMonthRaw;
     return {
       item: {
         name: formData.get("name").trim(),
@@ -3991,6 +4102,8 @@ function buildItem(kind, formData, current) {
         amountNote: current?.amountNote ?? (amountPending ? formData.get("amountNote").trim() : ""),
         dueDay: Math.min(31, Math.max(1, Number(formData.get("dueDay")) || 1)),
         category: formData.get("category") || "other",
+        startMonth: reversed ? endMonthRaw : startMonthRaw,
+        endMonth: reversed ? startMonthRaw : endMonthRaw,
         memo: formData.get("memo").trim(),
         active: current?.active ?? true,
         createdAt: current?.createdAt || timestamp,
@@ -4604,6 +4717,8 @@ function buildCsvItem(kind, data) {
       amountNote: String(data.amountNote || "").trim(),
       dueDay: Math.min(31, Math.max(1, Number(data.dueDay) || 1)),
       category: normalizePaymentCategory(data.category),
+      startMonth: normalizeMonthValue(data.startMonth),
+      endMonth: normalizeMonthValue(data.endMonth),
       memo: String(data.memo || "").trim(),
       active: parseCsvBoolean(data.active, true),
       createdAt: timestamp,
